@@ -153,10 +153,9 @@ def get_beta_posterior_draws(posterior_mean, posterior_var):
 # we calculate the posterior probability of P(R_1 > R_0) clipped
 # we make a Bernoulli draw with prob. P(R_1 > R_0) of the action
 def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_func):
-  # num_positive_preds = len(np.where(beta_posterior_draws @ advantage_state > 0)[0])
-  # posterior_prob =  num_positive_preds / len(beta_posterior_draws)
   posterior_prob = np.mean(smoothing_func(beta_posterior_draws @ advantage_state))
   clipped_prob = max(min(MAX_CLIP_VALUE, posterior_prob), MIN_CLIP_VALUE)
+  
   return bernoulli.rvs(clipped_prob), clipped_prob
 
 """### Smoothing Functions
