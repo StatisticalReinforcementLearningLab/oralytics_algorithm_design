@@ -1,0 +1,227 @@
+# -*- coding: utf-8 -*-
+"""
+RL Algorithm that uses a contextual bandit framework with Thompson sampling, full-pooling, and
+a Bayesian Linear Regression reward approximating function.
+"""
+
+import pandas as pd
+import numpy as np
+from scipy.stats import bernoulli
+
+## CLIPPING VALUES ##
+MIN_CLIP_VALUE = 0.1
+MAX_CLIP_VALUE = 0.9
+#MIN_CLIP_VALUE = 0.35
+#MAX_CLIP_VALUE = 0.75
+# Advantage Time Feature Dimensions
+D_advantage = 4
+# Baseline Time Feature Dimensions
+D_baseline = 5
+# Number of Posterior Draws
+NUM_POSTERIOR_SAMPLES = 5000
+
+### Reward Definition ###
+GAMMA = 13/14
+B = 111
+A_1 = 0.5
+A_2 = 0.8
+DISCOUNTED_GAMMA_ARRAY = GAMMA ** np.flip(np.arange(14))
+CONSTANT = (1 - GAMMA) / (1 - GAMMA**14)
+
+# b bar is designed to be in [0, 180]
+def normalize_b_bar(b_bar):
+  return (b_bar - (181 / 2)) / (179 / 2)
+
+# brushing duration is of length 14 where the first element is the brushing duration
+# at time t - 14 and the last element the brushing duration at time t - 1
+def calculate_b_bar(brushing_durations):
+  sum_term = DISCOUNTED_GAMMA_ARRAY * brushing_durations
+
+  return CONSTANT * np.sum(sum_term)
+
+def calculate_a_bar(past_actions):
+  sum_term = DISCOUNTED_GAMMA_ARRAY * past_actions
+
+  return CONSTANT * np.sum(sum_term)
+
+def calculate_b_condition(b_bar):
+  return b_bar > B
+
+def calculate_a1_condition(a_bar):
+  return a_bar > A_1
+
+def calculate_a2_condition(a_bar):
+  return a_bar > A_2
+
+def cost_definition(xi_1, xi_2, action, B_condition, A1_condition, A2_condition):
+  return action * (xi_1 * B_condition * A1_condition + xi_2 * A2_condition)
+
+# returns the reward where the cost term is parameterized by xi_1, xi_2
+def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
+                      b_bar, a_bar):
+  B_condition = calculate_b_condition(b_bar)
+  A1_condition = calculate_a1_condition(a_bar)
+  A2_condition = calculate_a2_condition(a_bar)
+  Q = min(brushing_quality, 180)
+  C = cost_definition(xi_1, xi_2, current_action, B_condition, A1_condition, A2_condition)
+
+  return Q - C
+
+## HELPERS ##
+def sigmoid(x):
+  return 1 / (1 + np.exp(-x))
+
+## baseline: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - weekend vs. week day
+# 4 - bias
+## advantage: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - bias
+def process_alg_state(env_state, b_bar, a_bar):
+    baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
+                               calculate_a_bar(a_bar), env_state[4], 1])
+    advantage_state = np.delete(baseline_state, 3)
+
+    return advantage_state, baseline_state
+
+class RLAlgorithmCandidate():
+    def __init__(self, cost_params, update_cadence, smoothing_func):
+        self.update_cadence = update_cadence
+        # xi_1, xi_2 params for the cost term parameterizes the reward def. func.
+        self.reward_def_func = lambda brushing_quality, current_action, b_bar, a_bar: \
+                      reward_definition(brushing_quality, \
+                                        cost_params[0], cost_params[1], \
+                                        current_action, b_bar, a_bar)
+        # smoothing function for after-study analysis
+        self.smoothing_func = smoothing_func
+        # process_alg_state is a global function
+        self.process_alg_state_func = process_alg_state
+
+    def action_selection(self, advantage_state, baseline_state):
+        return 0
+
+    def update(self, advantage_states, baseline_states, actions, pis, rewards):
+        return 0
+
+    def get_update_cadence(self):
+        return self.update_cadence
+
+"""### Bayesian Linear Regression Thompson Sampler
+---
+
+### Helper Functions
+---
+"""
+
+## POSTERIOR HELPERS ##
+# create the feature vector given state, action, and action selection probability
+def create_big_phi(advantage_states, baseline_states, actions, probs):
+  big_phi = np.hstack((baseline_states, np.multiply(advantage_states.T, probs).T, \
+                       np.multiply(advantage_states.T, (actions - probs)).T,))
+  return big_phi
+
+def compute_posterior_var(Phi, sigma_n_squared, prior_sigma):
+  return np.linalg.inv(1/sigma_n_squared * Phi.T @ Phi + np.linalg.inv(prior_sigma))
+
+def compute_posterior_mean(Phi, R, sigma_n_squared, prior_mu, prior_sigma):
+  # return np.linalg.inv(1/sigma_n_squared * X.T @ X + np.linalg.inv(prior_sigma)) \
+  # @ (1/sigma_n_squared * X.T @ y + (prior_mu @ np.linalg.inv(prior_sigma)).T)
+  return compute_posterior_var(Phi, sigma_n_squared, prior_sigma) \
+   @ (1/sigma_n_squared * Phi.T @ R + np.linalg.inv(prior_sigma) @ prior_mu)
+
+# update posterior distribution
+def update_posterior_w(Phi, R, sigma_n_squared, prior_mu, prior_sigma):
+  mean = compute_posterior_mean(Phi, R, sigma_n_squared, prior_mu, prior_sigma)
+  var = compute_posterior_var(Phi, sigma_n_squared, prior_sigma)
+
+  return mean, var
+
+def get_beta_posterior_draws(posterior_mean, posterior_var):
+  # grab last D_advantage of mean vector
+  beta_post_mean = posterior_mean[-D_advantage:]
+  # grab right bottom corner D_advantage x D_advantage submatrix
+  beta_post_var = posterior_var[-D_advantage:,-D_advantage:]
+
+  return np.random.multivariate_normal(beta_post_mean, beta_post_var, NUM_POSTERIOR_SAMPLES)
+
+## ACTION SELECTION ##
+# we calculate the posterior probability of P(R_1 > R_0) clipped
+# we make a Bernoulli draw with prob. P(R_1 > R_0) of the action
+def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_func):
+  # num_positive_preds = len(np.where(beta_posterior_draws @ advantage_state > 0)[0])
+  # posterior_prob =  num_positive_preds / len(beta_posterior_draws)
+  posterior_prob = np.mean(smoothing_func(beta_posterior_draws @ advantage_state))
+  clipped_prob = max(min(MAX_CLIP_VALUE, posterior_prob), MIN_CLIP_VALUE)
+  return bernoulli.rvs(clipped_prob), clipped_prob
+
+"""### Smoothing Functions
+---
+"""
+# traditional Thompson Sampling
+BASIC_THOMPSON_SAMPLING_FUNC = lambda x: x > 0
+
+# generalized logistic function https://en.wikipedia.org/wiki/Generalised_logistic_function
+# lower and upper asymptotes
+L_min = 0.2
+L_max = 0.75
+# larger values of b > 0 makes curve more "steep"
+B_logistic = 3
+# larger values of c > 0 shifts the value of function(0) to the right
+C_logistic = 6
+# larger values of k > 0 makes the asmptote towards upper clipping less steep
+# and the asymptote towards the lower clipping more steep
+K_logistic = 1
+
+def genearlized_logistic_func(x):
+    num = L_max - L_min
+    denom = (1 + C_logistic * np.exp(-B_logistic * x))**K_logistic
+
+    return L_min + (num / denom)
+
+GENERALIZED_LOGISTIC_FUNC = lambda x: np.apply_along_axis(genearlized_logistic_func, 0, x)
+
+"""### BLR Algorithm Object
+---
+"""
+
+## baseline: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - weekend vs. week day
+# 4 - bias
+## advantage: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - bias
+
+class BayesianLinearRegression(RLAlgorithmCandidate):
+    def __init__(self, cost_params, update_cadence, smoothing_func):
+        super(BayesianLinearRegression, self).__init__(cost_params, update_cadence, smoothing_func)
+
+        # THESE VALUES WERE SET WITH ROBAS 2 DATA
+        # size of mu vector = D_baseline + D_advantage + D_advantage
+        self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0])
+        # self.PRIOR_MU = np.zeros(D_baseline + D_advantage + D_advantage)
+        # self.PRIOR_SIGMA = 5 * np.eye(len(self.PRIOR_MU))
+        sigma_beta = 29.624
+        self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 12.989**2, 46.240**2, \
+                                             sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2,\
+                                             sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2]))
+        self.SIGMA_N_2 = 3396.449
+        # initial draws are from the prior
+        self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
+
+    def action_selection(self, advantage_state, baseline_state):
+        return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
+
+    def update(self, advantage_states, baseline_states, actions, pis, rewards):
+        Phi = create_big_phi(advantage_states, baseline_states, actions, pis)
+        posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
+        self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
