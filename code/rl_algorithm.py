@@ -3,6 +3,7 @@
 RL Algorithm that uses a contextual bandit framework with Thompson sampling, full-pooling, and
 a Bayesian Linear Regression reward approximating function.
 """
+from stat_computations import *
 
 import pandas as pd
 import numpy as np
@@ -113,17 +114,32 @@ class RLAlgorithmCandidate():
 
 """### Bayesian Linear Regression Thompson Sampler
 ---
-
-### Helper Functions
+"""
+"""
+#### BLR with Action-Centering
 ---
 """
-
 ## POSTERIOR HELPERS ##
 # create the feature vector given state, action, and action selection probability
 def create_big_phi(advantage_states, baseline_states, actions, probs):
   big_phi = np.hstack((baseline_states, np.multiply(advantage_states.T, probs).T, \
                        np.multiply(advantage_states.T, (actions - probs)).T,))
   return big_phi
+
+"""
+#### BLR without Action-Centering
+---
+"""
+
+def create_big_phi_no_action_centering(advantage_states, baseline_states, actions):
+  big_phi = np.hstack((baseline_states, np.multiply(advantage_states.T, actions).T))
+
+  return big_phi
+
+"""
+#### Helper Functions
+---
+"""
 
 def compute_posterior_var(Phi, sigma_n_squared, prior_sigma):
   return np.linalg.inv(1/sigma_n_squared * Phi.T @ Phi + np.linalg.inv(prior_sigma))
@@ -149,13 +165,14 @@ def get_beta_posterior_draws(posterior_mean, posterior_var):
 
   return np.random.multivariate_normal(beta_post_mean, beta_post_var, NUM_POSTERIOR_SAMPLES)
 
+
 ## ACTION SELECTION ##
 # we calculate the posterior probability of P(R_1 > R_0) clipped
 # we make a Bernoulli draw with prob. P(R_1 > R_0) of the action
 def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_func):
   posterior_prob = np.mean(smoothing_func(beta_posterior_draws @ advantage_state))
   clipped_prob = max(min(MAX_CLIP_VALUE, posterior_prob), MIN_CLIP_VALUE)
-  
+
   return bernoulli.rvs(clipped_prob), clipped_prob
 
 """### Smoothing Functions
@@ -166,8 +183,8 @@ BASIC_THOMPSON_SAMPLING_FUNC = lambda x: x > 0
 
 # generalized logistic function https://en.wikipedia.org/wiki/Generalised_logistic_function
 # lower and upper asymptotes
-L_min = 0.2
-L_max = 0.75
+L_min = 0.1
+L_max = 0.9
 # larger values of b > 0 makes curve more "steep"
 B_logistic = 3
 # larger values of c > 0 shifts the value of function(0) to the right
@@ -216,6 +233,7 @@ class BayesianLinearRegression(RLAlgorithmCandidate):
         self.SIGMA_N_2 = 3396.449
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
+        self.smoothing_func = smoothing_func
 
     def action_selection(self, advantage_state, baseline_state):
         return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
@@ -224,3 +242,33 @@ class BayesianLinearRegression(RLAlgorithmCandidate):
         Phi = create_big_phi(advantage_states, baseline_states, actions, pis)
         posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
         self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
+
+class BlrNoActionCentering(RLAlgorithmCandidate):
+    def __init__(self, cost_params, update_cadence, smoothing_func):
+        super(BlrNoActionCentering, self).__init__(cost_params, update_cadence, smoothing_func)
+
+        # THESE VALUES WERE SET WITH ROBAS 2 DATA
+        # size of mu vector = D_baseline + D_advantage
+        self.PRIOR_MU = np.zeros(D_baseline + D_advantage)
+        self.PRIOR_SIGMA = 5 * np.eye(len(self.PRIOR_MU))
+        self.posterior_mean = np.copy(self.PRIOR_MU)
+        self.posterior_var = np.copy(self.PRIOR_SIGMA)
+
+        self.SIGMA_N_2 = 3396.449
+        # initial draws are from the prior
+        self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
+        self.smoothing_func = smoothing_func
+
+    def action_selection(self, advantage_state, baseline_state):
+        return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
+
+    # pis don't get used
+    def update(self, advantage_states, baseline_states, actions, pis, rewards):
+        Phi = create_big_phi_no_action_centering(advantage_states, baseline_states, actions)
+        posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
+        self.posterior_mean = posterior_mean
+        self.posterior_var = posterior_var
+        self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
+
+    def compute_estimating_equation(self, user_history):
+        return compute_estimating_equation(user_history, self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
