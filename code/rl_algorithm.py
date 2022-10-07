@@ -221,6 +221,34 @@ class BayesianLinearRegression(RLAlgorithmCandidate):
     def __init__(self, cost_params, update_cadence, smoothing_func):
         super(BayesianLinearRegression, self).__init__(cost_params, update_cadence, smoothing_func)
 
+        self.smoothing_func = smoothing_func
+
+        # need to be set by children classes
+        self.PRIOR_MU = None
+        self.PRIOR_SIGMA = None
+        self.SIGMA_N_2 = None
+        self.feature_map = None
+        self.posterior_mean = None
+        self.posterior_var = None
+        self.beta_posterior_draws = None
+
+    def action_selection(self, advantage_state):
+        return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
+
+    def update(self, advantage_states, baseline_states, actions, pis, rewards):
+        Phi = self.feature_map(advantage_states, baseline_states, actions, pis)
+        posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
+        self.posterior_mean = posterior_mean
+        self.posterior_var = posterior_var
+        self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
+
+    def compute_estimating_equation(self, user_history):
+        return compute_estimating_equation(user_history, self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
+
+class BlrActionCentering(BayesianLinearRegression):
+    def __init__(self, cost_params, update_cadence, smoothing_func):
+        super(BlrActionCentering, self).__init__(cost_params, update_cadence, smoothing_func)
+
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage + D_advantage
         self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -230,20 +258,16 @@ class BayesianLinearRegression(RLAlgorithmCandidate):
         self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 12.989**2, 46.240**2, \
                                              sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2,\
                                              sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2]))
+        self.posterior_mean = np.copy(self.PRIOR_MU)
+        self.posterior_var = np.copy(self.PRIOR_SIGMA)
+        
         self.SIGMA_N_2 = 3396.449
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
-        self.smoothing_func = smoothing_func
+        # feature map
+        self.feature_map = create_big_phi
 
-    def action_selection(self, advantage_state, baseline_state):
-        return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
-
-    def update(self, advantage_states, baseline_states, actions, pis, rewards):
-        Phi = create_big_phi(advantage_states, baseline_states, actions, pis)
-        posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
-        self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
-
-class BlrNoActionCentering(RLAlgorithmCandidate):
+class BlrNoActionCentering(BayesianLinearRegression):
     def __init__(self, cost_params, update_cadence, smoothing_func):
         super(BlrNoActionCentering, self).__init__(cost_params, update_cadence, smoothing_func)
 
@@ -257,18 +281,5 @@ class BlrNoActionCentering(RLAlgorithmCandidate):
         self.SIGMA_N_2 = 3396.449
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
-        self.smoothing_func = smoothing_func
-
-    def action_selection(self, advantage_state, baseline_state):
-        return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
-
-    # pis don't get used
-    def update(self, advantage_states, baseline_states, actions, pis, rewards):
-        Phi = create_big_phi_no_action_centering(advantage_states, baseline_states, actions)
-        posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
-        self.posterior_mean = posterior_mean
-        self.posterior_var = posterior_var
-        self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
-
-    def compute_estimating_equation(self, user_history):
-        return compute_estimating_equation(user_history, self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
+        # feature map
+        self.feature_map = create_big_phi_no_action_centering
