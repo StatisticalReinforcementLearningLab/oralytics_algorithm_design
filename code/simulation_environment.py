@@ -7,6 +7,24 @@ from scipy.stats import bernoulli
 from scipy.stats import poisson
 from scipy.stats import norm
 
+class SimulationEnvironment():
+    def __init__(self, users_list, process_env_state_func, user_envs):
+        # List: users in the environment (can repeat)
+        self.users_list = users_list
+        # Func
+        self.process_env_state = process_env_state_func
+        # Dict: key: int trial_user_idx, val: user environment object
+        self.all_user_envs = user_envs
+
+    def generate_rewards(self, user_idx, state, action):
+        return self.all_user_envs[user_idx].generate_reward(state, action)
+
+    def get_states_for_user(self, user_idx):
+        return self.all_user_envs[user_idx].get_states()
+
+    def get_users(self):
+        return self.users_list
+
 ROBAS_3_STAT_PARAMS_DF = pd.read_csv('../sim_env_data/stat_user_models.csv')
 ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('../sim_env_data/non_stat_user_models.csv')
 robas_3_data_df = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data.csv")
@@ -270,13 +288,6 @@ class UserEnvironment():
                 # draw
                 is_unresponsive = bernoulli.rvs(self.unresponsive_prob)
                 if is_unresponsive:
-                    if (b_cond and a1_cond) and a2_cond == False:
-                        DEBUG_NUM_EFFECT_SHRINKS_1 += 1
-                    elif a2_cond and ((b_cond and a1_cond) == False):
-                        DEBUG_NUM_EFFECT_SHRINKS_2 += 1
-                    else:
-                        DEBUG_NUM_EFFECT_SHRINKS_3 += 1
-
                     self.user_effect_sizes = self.user_effect_sizes * self.unresponsive_val
                     self.times_shrunk += 1
 
@@ -304,23 +315,14 @@ def create_user_envs(users_list, unresponsive_val, env_type):
 
     return all_user_envs
 
-class SimulationEnvironment():
+class SimulationEnvironmentExperiment(SimulationEnvironment):
     def __init__(self, users_list, env_type, unresponsive_val):
-        # Func
-        self.process_env_state = lambda session, j, Qs: process_env_state(session, j, Qs, env_type)
-        # Dict: key: String user_id, val: user environment object
-        self.all_user_envs = create_user_envs(users_list, unresponsive_val, env_type)
-        # List: users in the environment (can repeat)
-        self.users_list = users_list
+        process_env_state_func = lambda session, j, Qs: process_env_state(session, j, Qs, env_type)
+        user_envs = create_user_envs(users_list, unresponsive_val, env_type)
 
-    def generate_rewards(self, user_idx, state, action):
-        return self.all_user_envs[user_idx].generate_reward(state, action)
-
-    def get_states_for_user(self, user_idx):
-        return self.all_user_envs[user_idx].get_states()
-
-    def get_users(self):
-        return self.users_list
+        super(SimulationEnvironmentExperiment, self).__init__(users_list, process_env_state_func, user_envs)
+        # Dimension of the environment state space
+        self.dimension = 5 if env_type == 'stat' else 6
 
     def update_responsiveness(self, user_idx, a1_cond, a2_cond, b_cond, j):
         self.all_user_envs[user_idx].update_responsiveness(a1_cond, a2_cond, b_cond, j)
@@ -329,9 +331,9 @@ class SimulationEnvironment():
 # These are the values you can tweak for the variants of the simulation environment
 RESPONSIVITY_SCALING_VALS = [0, 0.5, 0.8]
 
-STAT_LOW_R = lambda users_list: SimulationEnvironment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[0])
-STAT_MED_R = lambda users_list: SimulationEnvironment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[1])
-STAT_HIGH_R = lambda users_list: SimulationEnvironment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[2])
-NON_STAT_LOW_R = lambda users_list: SimulationEnvironment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[0])
-NON_STAT_MED_R = lambda users_list: SimulationEnvironment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[1])
-NON_STAT_HIGH_R = lambda users_list: SimulationEnvironment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[2])
+STAT_LOW_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[0])
+STAT_MED_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[1])
+STAT_HIGH_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[2])
+NON_STAT_LOW_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[0])
+NON_STAT_MED_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[1])
+NON_STAT_HIGH_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[2])
