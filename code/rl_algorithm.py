@@ -9,6 +9,24 @@ import pandas as pd
 import numpy as np
 from scipy.stats import bernoulli
 
+class RLAlgorithm():
+    def __init__(self, update_cadence, smoothing_func, process_alg_state_func):
+        # how often the RL algorithm updates parameters
+        self.update_cadence = update_cadence
+        # smoothing function for after-study analysis
+        self.smoothing_func = smoothing_func
+        # function that takes in a raw state and processes the current state for the algorithm
+        self.process_alg_state_func = process_alg_state_func
+
+    def action_selection(self, advantage_state, baseline_state):
+        return 0
+
+    def update(self, advantage_states, baseline_states, actions, pis, rewards):
+        return 0
+
+    def get_update_cadence(self):
+        return self.update_cadence
+
 ## CLIPPING VALUES ##
 MIN_CLIP_VALUE = 0.1
 MAX_CLIP_VALUE = 0.9
@@ -90,18 +108,15 @@ def process_alg_state(env_state, b_bar, a_bar):
 
     return advantage_state, baseline_state
 
-class RLAlgorithmCandidate():
+class RLAlgorithmExperimentCandidate(RLAlgorithm):
     def __init__(self, cost_params, update_cadence, smoothing_func):
-        self.update_cadence = update_cadence
+        # process_alg_state is a global function
+        super(RLAlgorithmExperimentCandidate, self).__init__(update_cadence, smoothing_func, process_alg_state)
         # xi_1, xi_2 params for the cost term parameterizes the reward def. func.
         self.reward_def_func = lambda brushing_quality, current_action, b_bar, a_bar: \
                       reward_definition(brushing_quality, \
                                         cost_params[0], cost_params[1], \
                                         current_action, b_bar, a_bar)
-        # smoothing function for after-study analysis
-        self.smoothing_func = smoothing_func
-        # process_alg_state is a global function
-        self.process_alg_state_func = process_alg_state
 
     def action_selection(self, advantage_state, baseline_state):
         return 0
@@ -115,22 +130,16 @@ class RLAlgorithmCandidate():
 """### Bayesian Linear Regression Thompson Sampler
 ---
 """
-"""
-#### BLR with Action-Centering
----
-"""
 ## POSTERIOR HELPERS ##
 # create the feature vector given state, action, and action selection probability
+
+# with action centering
 def create_big_phi(advantage_states, baseline_states, actions, probs):
   big_phi = np.hstack((baseline_states, np.multiply(advantage_states.T, probs).T, \
                        np.multiply(advantage_states.T, (actions - probs)).T,))
   return big_phi
 
-"""
-#### BLR without Action-Centering
----
-"""
-
+# without action centering
 def create_big_phi_no_action_centering(advantage_states, baseline_states, actions):
   big_phi = np.hstack((baseline_states, np.multiply(advantage_states.T, actions).T))
 
@@ -217,11 +226,9 @@ GENERALIZED_LOGISTIC_FUNC = lambda x: np.apply_along_axis(genearlized_logistic_f
 # 2 - a bar
 # 3 - bias
 
-class BayesianLinearRegression(RLAlgorithmCandidate):
+class BayesianLinearRegression(RLAlgorithmExperimentCandidate):
     def __init__(self, cost_params, update_cadence, smoothing_func):
         super(BayesianLinearRegression, self).__init__(cost_params, update_cadence, smoothing_func)
-
-        self.smoothing_func = smoothing_func
 
         # need to be set by children classes
         self.PRIOR_MU = None
@@ -242,8 +249,8 @@ class BayesianLinearRegression(RLAlgorithmCandidate):
         self.posterior_var = posterior_var
         self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
 
-    def compute_estimating_equation(self, user_history):
-        return compute_estimating_equation(user_history, self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
+    def compute_estimating_equation(self, user_history, n):
+        return compute_estimating_equation(user_history, n, self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
 
 class BlrActionCentering(BayesianLinearRegression):
     def __init__(self, cost_params, update_cadence, smoothing_func):
@@ -260,7 +267,7 @@ class BlrActionCentering(BayesianLinearRegression):
                                              sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2]))
         self.posterior_mean = np.copy(self.PRIOR_MU)
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
-        
+
         self.SIGMA_N_2 = 3396.449
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
@@ -282,4 +289,5 @@ class BlrNoActionCentering(BayesianLinearRegression):
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
         # feature map
-        self.feature_map = create_big_phi_no_action_centering
+        self.feature_map = lambda adv_states, base_states, probs, actions: \
+        create_big_phi_no_action_centering(adv_states, base_states, actions)
