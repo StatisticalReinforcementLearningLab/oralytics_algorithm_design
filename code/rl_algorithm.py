@@ -3,7 +3,7 @@
 RL Algorithm that uses a contextual bandit framework with Thompson sampling, full-pooling, and
 a Bayesian Linear Regression reward approximating function.
 """
-from stat_computations import *
+from code import stat_computations
 
 import pandas as pd
 import numpy as np
@@ -17,6 +17,8 @@ class RLAlgorithm():
         self.smoothing_func = smoothing_func
         # function that takes in a raw state and processes the current state for the algorithm
         self.process_alg_state_func = process_alg_state_func
+        # feature space dimension
+        self.feature_dim = 0
 
     def action_selection(self, advantage_state, baseline_state):
         return 0
@@ -258,6 +260,7 @@ class BlrActionCentering(BayesianLinearRegression):
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage + D_advantage
+        self.feature_dim = D_baseline + D_advantage + D_advantage
         self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0])
         # self.PRIOR_MU = np.zeros(D_baseline + D_advantage + D_advantage)
         # self.PRIOR_SIGMA = 5 * np.eye(len(self.PRIOR_MU))
@@ -280,6 +283,7 @@ class BlrNoActionCentering(BayesianLinearRegression):
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage
+        self.feature_dim = D_baseline + D_advantage
         self.PRIOR_MU = np.zeros(D_baseline + D_advantage)
         self.PRIOR_SIGMA = 5 * np.eye(len(self.PRIOR_MU))
         self.posterior_mean = np.copy(self.PRIOR_MU)

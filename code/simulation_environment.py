@@ -25,8 +25,8 @@ class SimulationEnvironment():
     def get_users(self):
         return self.users_list
 
-ROBAS_3_STAT_PARAMS_DF = pd.read_csv('../sim_env_data/stat_user_models.csv')
-ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('../sim_env_data/non_stat_user_models.csv')
+ROBAS_3_STAT_PARAMS_DF = pd.read_csv('sim_env_data/stat_user_models.csv')
+ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('sim_env_data/non_stat_user_models.csv')
 robas_3_data_df = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data.csv")
 ROBAS_3_USERS = np.array(ROBAS_3_STAT_PARAMS_DF['User'])
 NUM_USERS = len(ROBAS_3_USERS)
