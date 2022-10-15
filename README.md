@@ -10,3 +10,5 @@ This repository contains code for running simulations to make design decisions f
 
 2. `python3 environment_base_model_selection.py` will take the csv files generated as described above in step 1 and will compute the RMSE of the model and the observed ROBAS 3 data and choose the base model class that yields a lower RMSE for that user. Outputs: [stat_user_models.csv](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/sim_env_data/stat_user_models.csv) and [non_stat_user_models.csv](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/sim_env_data/non_stat_user_models.csv)
 
+### Running Unit Tests
+To run tests, you need to be in the root folder and then run for example `python3 -m unittest test.test_rl_experiments` if you want to run the `test_rl_experiments.py` file in the test folder.
