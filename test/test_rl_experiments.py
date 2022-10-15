@@ -1,4 +1,4 @@
-from code import rl_experiments
+from src import rl_experiments
 import pandas as pd
 import numpy as np
 # stack overflow on directory structure to run unit tests:
@@ -37,19 +37,19 @@ def test_data_df_gets_value():
             rl_experiments.set_data_df_values_for_user(data_df, user_idx, decision_t, 1, 0.75, 120, 120, np.ones(5))
     # getting reward values
     values = rl_experiments.get_data_df_values_for_users(data_df, users_groups[:,0], 7, 'reward')
-    assert(np.array_equal(np.array(values).flatten(), 120. * np.ones(42)))
+    assert(np.array_equal(values.flatten(), 120. * np.ones(42)))
 
     # getting prob values
     values = rl_experiments.get_data_df_values_for_users(data_df, users_groups[:,0], 7, 'prob')
-    assert(np.array_equal(np.array(values).flatten(), 0.75 * np.ones(42)))
+    assert(np.array_equal(values.flatten(), 0.75 * np.ones(42)))
 
     # getting action values
     values = rl_experiments.get_data_df_values_for_users(data_df, users_groups[:,0], 7, 'action')
-    assert(np.array_equal(np.array(values).flatten(), np.ones(42)))
+    assert(np.array_equal(values.flatten(), np.ones(42)))
 
     # getting action values
     values = rl_experiments.get_data_df_values_for_users(data_df, users_groups[:,0], 7, 'state.*')
-    assert(np.array_equal(np.array(values), np.ones(shape=(42, 5))))
+    assert(np.array_equal(values, np.ones(shape=(42, 5))))
 
 def test_update_df_sets_value():
     # with incremental recruitment

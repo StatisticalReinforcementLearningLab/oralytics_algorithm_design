@@ -61,7 +61,6 @@ from scipy.stats import skew
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
-!pip install pymc3
 import pymc3 as pm
 from pymc3.model import Model
 import theano.tensor as tt

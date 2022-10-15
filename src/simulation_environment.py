@@ -102,7 +102,7 @@ def process_env_state(session, j, Qs, env_type='stat'):
     # proportion of past success brushing
     prior_idx = 2 if env_type == 'stat' else 3
     if (j >= 14):
-      env_state[prior_idx] = np.sum([Qs[j - k] > 0.0 for k in range(1, 15)]) / 14
+      env_state[prior_idx] = np.mean([Qs[-14:] > 0.0])
 
     return env_state
 
@@ -321,6 +321,8 @@ class SimulationEnvironmentExperiment(SimulationEnvironment):
         user_envs = create_user_envs(users_list, unresponsive_val, env_type)
 
         super(SimulationEnvironmentExperiment, self).__init__(users_list, process_env_state_func, user_envs)
+
+        self.env_type = env_type
         # Dimension of the environment state space
         self.dimension = 5 if env_type == 'stat' else 6
 

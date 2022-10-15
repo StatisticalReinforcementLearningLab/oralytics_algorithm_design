@@ -3,7 +3,8 @@
 RL Algorithm that uses a contextual bandit framework with Thompson sampling, full-pooling, and
 a Bayesian Linear Regression reward approximating function.
 """
-from code import stat_computations
+# from src import stat_computations
+import stat_computations
 
 import pandas as pd
 import numpy as np
@@ -23,7 +24,7 @@ class RLAlgorithm():
     def action_selection(self, advantage_state, baseline_state):
         return 0
 
-    def update(self, advantage_states, baseline_states, actions, pis, rewards):
+    def update(self, alg_states, actions, pis, rewards):
         return 0
 
     def get_update_cadence(self):
@@ -83,10 +84,9 @@ def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
   B_condition = calculate_b_condition(b_bar)
   A1_condition = calculate_a1_condition(a_bar)
   A2_condition = calculate_a2_condition(a_bar)
-  Q = min(brushing_quality, 180)
   C = cost_definition(xi_1, xi_2, current_action, B_condition, A1_condition, A2_condition)
 
-  return Q - C
+  return brushing_quality - C
 
 ## HELPERS ##
 def sigmoid(x):
@@ -103,10 +103,18 @@ def sigmoid(x):
 # 1 - b bar
 # 2 - a bar
 # 3 - bias
-def process_alg_state(env_state, b_bar, a_bar):
+def get_adv_state(baseline_state):
+    # if baseline state is a single array
+    if len(baseline_state.shape) < 2:
+        return np.delete(baseline_state, 3)
+    else:
+        return np.delete(baseline_state, 3, 1)
+
+def process_alg_state(env_state, env_type, b_bar, a_bar):
+    day_type = env_state[3] if env_type == 'stat' else env_state[4]
     baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
-                               calculate_a_bar(a_bar), env_state[4], 1])
-    advantage_state = np.delete(baseline_state, 3)
+                               calculate_a_bar(a_bar), day_type, 1])
+    advantage_state = get_adv_state(baseline_state)
 
     return advantage_state, baseline_state
 
@@ -244,15 +252,17 @@ class BayesianLinearRegression(RLAlgorithmExperimentCandidate):
     def action_selection(self, advantage_state):
         return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
 
-    def update(self, advantage_states, baseline_states, actions, pis, rewards):
-        Phi = self.feature_map(advantage_states, baseline_states, actions, pis)
+    def update(self, alg_states, actions, pis, rewards):
+        advantage_states = get_adv_state(alg_states)
+        Phi = self.feature_map(advantage_states, alg_states, actions, pis)
         posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
         self.posterior_mean = posterior_mean
         self.posterior_var = posterior_var
         self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
 
     def compute_estimating_equation(self, user_history, n):
-        return compute_estimating_equation(user_history, n, self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
+        return stat_computations.compute_estimating_equation(user_history, n, \
+        self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
 
 class BlrActionCentering(BayesianLinearRegression):
     def __init__(self, cost_params, update_cadence, smoothing_func):
