@@ -21,12 +21,12 @@ from sklearn.metrics import mean_squared_error
 """
 
 # get all robas 3 users
-ROBAS_3_DATA = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data.csv")
-ROBAS_3_USERS = ROBAS_3_USERS = np.unique(ROBAS_3_DATA['ROBAS ID'])
+ROBAS_3_DATA = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data_complete.csv")
+ROBAS_3_USERS = ROBAS_3_USERS = np.unique(ROBAS_3_DATA['robas id'])
 
 # total brushing quality
-robas_3_user_total_brush_quality = (np.array(ROBAS_3_DATA['Brushing duration'])[::2] - np.array(ROBAS_3_DATA['Pressure duration'])[::2])\
- + (np.array(ROBAS_3_DATA['Brushing duration'])[1::2] - np.array(ROBAS_3_DATA['Pressure duration'])[1::2])
+robas_3_user_total_brush_quality = (np.array(ROBAS_3_DATA['brushingDuration'])[::2] - np.array(ROBAS_3_DATA['pressureDuration'])[::2])\
+ + (np.array(ROBAS_3_DATA['brushingDuration'])[1::2] - np.array(ROBAS_3_DATA['pressureDuration'])[1::2])
 
 print("Empirical Mean: ", np.mean(robas_3_user_total_brush_quality))
 print("Empirical Std: ", np.std(robas_3_user_total_brush_quality))
@@ -35,21 +35,20 @@ print("Empirical Std: ", np.std(robas_3_user_total_brush_quality))
 def normalize_total_brush_quality(quality):
   return (quality - np.mean(robas_3_user_total_brush_quality)) / np.std(robas_3_user_total_brush_quality)
 
-# returns a function to normalize day in study for each user
-def normalize_day_in_study_func(user_id):
-  user_specific_length = np.array(ROBAS_3_DATA[ROBAS_3_DATA['ROBAS ID'] == user_id]['Day in Study'])[-1]
-
-  return lambda day: (day - ((user_specific_length + 1)/2)) / ((user_specific_length - 1)/2)
+# for the expected 70 day study
+def normalize_day_in_study(day):
+  return (day - 35.5) / 34.5
 
 def sigmoid(x):
   return 1 / (1 + np.exp(-x))
 
 def get_rewards(user_id):
-  return np.array(ROBAS_3_DATA[ROBAS_3_DATA['ROBAS ID'] == user_id]['Brushing duration'] - \
-                  ROBAS_3_DATA[ROBAS_3_DATA['ROBAS ID'] == user_id]['Pressure duration'])
+  return np.array(ROBAS_3_DATA[ROBAS_3_DATA['robas id'] == user_id]['brushingDuration'] - \
+                  ROBAS_3_DATA[ROBAS_3_DATA['robas id'] == user_id]['pressureDuration'])[:140]
 
+# only get the first 70 days when fitting the environment model
 def get_user_df(user_id):
-  return ROBAS_3_DATA[ROBAS_3_DATA['ROBAS ID'] == user_id]
+  return ROBAS_3_DATA[ROBAS_3_DATA['robas id'] == user_id][:140]
 
 # generating stationary state space
 # 0 - Time of Day
@@ -99,8 +98,6 @@ def generate_state_spaces_non_stationarity(user_id, rewards):
   D = 6
   user_df = get_user_df(user_id)
   states = np.zeros(shape=(len(user_df), D))
-  # user specific normalization for day in study
-  norm_func = normalize_day_in_study_func(user_id)
   for i in range(len(user_df)):
     df_array = np.array(user_df)[i]
     # time of day
@@ -112,7 +109,7 @@ def generate_state_spaces_non_stationarity(user_id, rewards):
       else:
         states[i][1] = normalize_total_brush_quality(rewards[i - 2] + rewards[i - 3])
     # day in study
-    states[i][2] = norm_func(df_array[2])
+    states[i][2] = normalize_day_in_study(df_array[2])
     # prop. brushed in past 7 days
     if i > 13:
       states[i][3] = df_array[7]
