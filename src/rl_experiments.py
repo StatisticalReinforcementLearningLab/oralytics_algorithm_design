@@ -6,7 +6,8 @@ import pandas as pd
 ## GLOBAL VALUES ##
 ### ANNA TODO: FOR INITIAL EXPERIMENTS WE ARE NOT DOING INCREMENTAL RECRUITEMENT ###
 ### CHANGE BACK TO  `RECRUITMENT_RATE = 4` TO DO INCREMENTAL RECRUITMENT ###
-RECRUITMENT_RATE = 72
+# RECRUITMENT_RATE = 72
+RECRUITMENT_RATE = 4
 TRIAL_LENGTH_IN_WEEKS = 10
 # We should have NUM_USERS x NUM_DECISION_TIMES datapoints for each saved value or
 # statistic at the end of the study
@@ -32,8 +33,11 @@ def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
     data_dict = {}
     data_dict['user_idx'] = np.repeat(users_groups[:,0].astype(int), NUM_DECISION_TIMES)
     data_dict['user_id'] = np.repeat(users_groups[:,2], NUM_DECISION_TIMES)
-    data_dict['decision time'] = np.stack([range(NUM_DECISION_TIMES) for _ in range(N)], axis=0).flatten()
-    data_dict['day in study'] = 1 + ((14 * np.repeat(users_groups[:,1].astype(int), NUM_DECISION_TIMES) + data_dict['decision time']) // 2)
+    data_dict['user_entry_decision_t'] = 14 * np.repeat(users_groups[:,1].astype(int), NUM_DECISION_TIMES)
+    data_dict['user_last_decision_t'] = 14 * np.repeat(users_groups[:,1].astype(int), NUM_DECISION_TIMES) + (NUM_DECISION_TIMES - 1)
+    data_dict['user_decision_t'] = np.stack([range(NUM_DECISION_TIMES) for _ in range(N)], axis=0).flatten()
+    data_dict['calendar_decision_t'] = 14 * np.repeat(users_groups[:,1].astype(int), NUM_DECISION_TIMES) + data_dict['user_decision_t']
+    data_dict['day_in_study'] = 1 + ((14 * np.repeat(users_groups[:,1].astype(int), NUM_DECISION_TIMES) + data_dict['user_decision_t']) // 2)
     for key in FILL_IN_COLS:
         data_dict[key] = np.full(batch_data_size, np.nan)
     data_df = pd.DataFrame.from_dict(data_dict)
@@ -57,6 +61,7 @@ def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
     estimating_eqns_dict['user_id'] = np.repeat(users_groups[:,2], num_updates_for_cluster)
     for i in range(rl_algorithm_feature_dim):
         estimating_eqns_dict['mean_estimate.{}'.format(i)] = np.full(N * num_updates_for_cluster, np.nan)
+    for i in range(rl_algorithm_feature_dim):
         for j in range(rl_algorithm_feature_dim):
             estimating_eqns_dict['var_estimate.{}.{}'.format(i, j)] = np.full(N * num_updates_for_cluster, np.nan)
     estimating_eqns_df = pd.DataFrame.from_dict(estimating_eqns_dict)
@@ -66,10 +71,13 @@ def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
 # regex pattern '.*' gets you everything
 # Note: if regex pattern only refers to one column, then you need to .flatten() the resulting array
 def get_data_df_values_for_users(data_df, user_idxs, day_in_study, regex_pattern):
-    return np.array(data_df.loc[(data_df['user_idx'].isin(user_idxs)) & (data_df['day in study'] <= day_in_study)].filter(regex=(regex_pattern)))
+    return np.array(data_df.loc[(data_df['user_idx'].isin(user_idxs)) & (data_df['day_in_study'] <= day_in_study)].filter(regex=(regex_pattern)))
+
+def get_user_data_values_from_decision_t(data_df, user_idx, decision_t, regex_pattern):
+    return np.array(data_df.loc[(data_df['user_idx'] == user_idx) & (data_df['user_decision_t'] < decision_t)].filter(regex=(regex_pattern)))
 
 def set_data_df_values_for_user(data_df, user_idx, decision_time, action, prob, reward, quality, alg_state):
-    data_df.loc[(data_df['user_idx'] == user_idx) & (data_df['decision time'] == decision_time), FILL_IN_COLS] = np.concatenate([[action, prob, reward, quality], alg_state])
+    data_df.loc[(data_df['user_idx'] == user_idx) & (data_df['user_decision_t'] == decision_time), FILL_IN_COLS] = np.concatenate([[action, prob, reward, quality], alg_state])
 
 def set_update_df_values(update_df, update_t, posterior_mu, posterior_var):
     update_df.iloc[update_df['update_t'] == update_t, 1:] = np.concatenate([posterior_mu, posterior_var.flatten()])
@@ -125,8 +133,8 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             for decision_idx in range(14):
                 ## PROCESS STATE ##
                 j = (week - 1 - user_entry_date) * 14 + decision_idx
-                user_qualities = get_data_df_values_for_users(data_df, [user_idx], int(1 + j // 2) - 1, 'quality').flatten()
-                user_actions = get_data_df_values_for_users(data_df, [user_idx], int(1 + j // 2) - 1, 'action').flatten()
+                user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j,  'quality').flatten()
+                user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j,  'action').flatten()
                 env_state = sim_env.process_env_state(user_states[j], j, user_qualities)
                 # if first week for user, we impute A bar and B bar
                 if j < 14:
@@ -139,6 +147,7 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
                 ## ACTION SELECTION ##
                 action, action_prob = alg_candidate.action_selection(advantage_state)
                 ## REWARD GENERATION ##
+                # quality definition
                 quality = min(sim_env.generate_rewards(user_idx, env_state, action), 180)
                 reward = alg_candidate.reward_def_func(quality, action, b_bar, a_bar)
                 ## SAVE VALUES ##
@@ -169,7 +178,7 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
         week += 1
         if (week - 1 < len(user_groups) // RECRUITMENT_RATE):
             # add more users
-            current_groups = np.concatenate((current_groups, user_groups[RECRUITMENT_RATE * week: RECRUITMENT_RATE * week + RECRUITMENT_RATE]), axis=0)
+            current_groups = np.concatenate((current_groups, user_groups[RECRUITMENT_RATE * (week - 1): RECRUITMENT_RATE * (week - 1) + RECRUITMENT_RATE]), axis=0)
         # check if some user group finished the study
         if (week > TRIAL_LENGTH_IN_WEEKS):
             current_groups = current_groups[RECRUITMENT_RATE:]

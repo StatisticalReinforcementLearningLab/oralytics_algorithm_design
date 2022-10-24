@@ -27,7 +27,7 @@ class SimulationEnvironment():
 
 ROBAS_3_STAT_PARAMS_DF = pd.read_csv('sim_env_data/stat_user_models.csv')
 ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('sim_env_data/non_stat_user_models.csv')
-robas_3_data_df = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data.csv")
+robas_3_data_df = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data_complete.csv")
 ROBAS_3_USERS = np.array(ROBAS_3_STAT_PARAMS_DF['User'])
 NUM_USERS = len(ROBAS_3_USERS)
 
@@ -43,7 +43,7 @@ def sigmoid(x):
 
 ### STATE SPACE ###
 def get_user_df(user_id):
-  return robas_3_data_df[robas_3_data_df['ROBAS ID'] == user_id]
+  return robas_3_data_df[robas_3_data_df['robas id'] == user_id]
 
 def generate_state_spaces_stat(user_df, num_days):
   ## init ##
@@ -56,7 +56,7 @@ def generate_state_spaces_stat(user_df, num_days):
     states[i][4] = 1
 
   # reinput weekday vs. weekend
-  first_weekend_idx = np.where(np.array(user_df['Day Type']) == 1)[0][0]
+  first_weekend_idx = np.where(np.array(user_df['dayType']) == 1)[0][0]
   for j in range(4):
     states[first_weekend_idx + j::14,3] = 1
 
@@ -75,7 +75,7 @@ def generate_state_spaces_non_stat(user_df, num_days):
     states[i][5] = 1
 
   # reinput weekday vs. weekend
-  first_weekend_idx = np.where(np.array(user_df['Day Type']) == 1)[0][0]
+  first_weekend_idx = np.where(np.array(user_df['dayType']) == 1)[0][0]
   for j in range(4):
     states[first_weekend_idx + j::14,4] = 1
 
