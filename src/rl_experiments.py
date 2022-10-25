@@ -164,9 +164,6 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
         # currently week + 1 is the same as update_t because update_t indexes by 1
         day_in_study = week * 7
         current_user_idxs = current_groups[:,0].astype(int)
-        compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
-                                                    current_user_idxs, alg_candidate, \
-                                                    week, day_in_study)
         # update time at the end of each week
         alg_states = get_data_df_values_for_users(data_df, current_user_idxs, day_in_study, 'state.*')
         actions = get_data_df_values_for_users(data_df, current_user_idxs, day_in_study, 'action').flatten()
@@ -174,6 +171,10 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
         rewards = get_data_df_values_for_users(data_df, current_user_idxs, day_in_study, 'reward').flatten()
         alg_candidate.update(alg_states, actions, pis, rewards)
         set_update_df_values(update_df, week, alg_candidate.posterior_mean, alg_candidate.posterior_var)
+        # estimating questions
+        compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
+                                                    current_user_idxs, alg_candidate, \
+                                                    week, day_in_study)
         # handle adding or removing user groups
         week += 1
         if (week - 1 < len(user_groups) // RECRUITMENT_RATE):
