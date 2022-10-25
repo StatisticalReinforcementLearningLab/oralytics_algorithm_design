@@ -44,12 +44,12 @@ def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
     ### udpate df ###
     update_dict = {}
     num_updates = compute_num_updates(users_groups, update_cadence)
-    update_dict['update_t'] = np.arange(1, num_updates + 1)
+    update_dict['update_t'] = np.arange(0, num_updates + 1)
     for i in range(rl_algorithm_feature_dim):
-        update_dict['posterior_mu.{}'.format(i)] = np.full(num_updates, np.nan)
+        update_dict['posterior_mu.{}'.format(i)] = np.full(num_updates + 1, np.nan)
     for i in range(rl_algorithm_feature_dim):
         for j in range(rl_algorithm_feature_dim):
-            update_dict['posterior_var.{}.{}'.format(i, j)] = np.full(num_updates, np.nan)
+            update_dict['posterior_var.{}.{}'.format(i, j)] = np.full(num_updates + 1, np.nan)
     update_df = pd.DataFrame.from_dict(update_dict)
     ### estimating eqns df ###
     estimating_eqns_dict = {}
@@ -122,6 +122,8 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
     env_users = sim_env.get_users()
     update_cadence = alg_candidate.get_update_cadence()
     data_df, update_df, estimating_eqns_df = create_dfs(user_groups, update_cadence, alg_candidate.feature_dim)
+    # add in prior values to posterior dataframe
+    set_update_df_values(update_df, 0, alg_candidate.posterior_mean, alg_candidate.posterior_var)
     current_groups = user_groups[:RECRUITMENT_RATE]
     week = 1
     while (len(current_groups) > 0):

@@ -14,10 +14,10 @@ This document explains the column names and data frames that are produced with e
 * `prob`: posterior probability of selecting action 1 for that decision time
 * `reward`: reward, a function of brushing quality and cost of sending an intervention, for that decision time (used to train RL algorithm)
 * `quality`: actual brushing quality for that decision time (used to evaluate algorithm)
-* `state.{}`: flattened state (context) vector observed by the algorithm at decision time and used for training 
+* `state.{}`: flattened state (context) vector observed by the algorithm at decision time and used for training
 
 ## Update DataFrame
-* `update_t`: index for the update time, starts with 1
+* `update_t`: index for the update time, starts with 0. 0 index refers to the prior distribution before any data update and 1 index refers to the first posterior update using data. 
 * `posterior_mu.{}`: flattened posterior mean vector where `{}` indexes into the vector, starts with 0
 * `posterior_var.{}.{}`: flattened posterior covariance matrix where `{}` indexes the row and the second `{}` indexes the column, starts with 0
 
