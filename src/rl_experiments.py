@@ -23,7 +23,7 @@ def compute_num_updates(users_groups, update_cadence):
 
     return int(num_updates)
 
-FILL_IN_COLS = ['action', 'prob', 'reward', 'quality', 'state.tod', 'state.b.bar',\
+FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality', 'state.tod', 'state.b.bar',\
  'state.a.bar', 'state.day.type', 'state.bias']
 
 def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
@@ -76,8 +76,8 @@ def get_data_df_values_for_users(data_df, user_idxs, day_in_study, regex_pattern
 def get_user_data_values_from_decision_t(data_df, user_idx, decision_t, regex_pattern):
     return np.array(data_df.loc[(data_df['user_idx'] == user_idx) & (data_df['user_decision_t'] < decision_t)].filter(regex=(regex_pattern)))
 
-def set_data_df_values_for_user(data_df, user_idx, decision_time, action, prob, reward, quality, alg_state):
-    data_df.loc[(data_df['user_idx'] == user_idx) & (data_df['user_decision_t'] == decision_time), FILL_IN_COLS] = np.concatenate([[action, prob, reward, quality], alg_state])
+def set_data_df_values_for_user(data_df, user_idx, decision_time, policy_idx, action, prob, reward, quality, alg_state):
+    data_df.loc[(data_df['user_idx'] == user_idx) & (data_df['user_decision_t'] == decision_time), FILL_IN_COLS] = np.concatenate([[policy_idx, action, prob, reward, quality], alg_state])
 
 def set_update_df_values(update_df, update_t, posterior_mu, posterior_var):
     update_df.iloc[update_df['update_t'] == update_t, 1:] = np.concatenate([posterior_mu, posterior_var.flatten()])
@@ -153,7 +153,7 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
                 quality = min(sim_env.generate_rewards(user_idx, env_state, action), 180)
                 reward = alg_candidate.reward_def_func(quality, action, b_bar, a_bar)
                 ## SAVE VALUES ##
-                set_data_df_values_for_user(data_df, user_idx, j, action, action_prob, reward, quality, baseline_state)
+                set_data_df_values_for_user(data_df, user_idx, j, week - 1, action, action_prob, reward, quality, baseline_state)
                 ## UPDATE UNRESPONSIVENESS ##
                 # if it's after the first week
                 if j >= 14:
