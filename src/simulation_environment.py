@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+import pickle
 
 from scipy.stats import bernoulli
 from scipy.stats import poisson
@@ -45,6 +46,12 @@ def sigmoid(x):
 def get_user_df(user_id):
   return robas_3_data_df[robas_3_data_df['robas id'] == user_id]
 
+# Stationary State Space
+# 0 - Time of Day
+# 1 - Prior Day Total Brush Time
+# 2 - Prop. Non-Zero Brushing In Past 7 Days
+# 3 - Weekday vs. Weekend
+# 4 - Bias
 def generate_state_spaces_stat(user_df, num_days):
   ## init ##
   D = 5
@@ -62,6 +69,13 @@ def generate_state_spaces_stat(user_df, num_days):
 
   return states
 
+# Non-stationary state space
+# 0 - Time of Day
+# 1 - Prior Day Total Brush Time
+# 2 - Day In Study
+# 3 - Prop. Non-Zero Brushing In Past 7 Days
+# 4 - Weekday vs. Weekend
+# 5 - Bias
 def generate_state_spaces_non_stat(user_df, num_days):
   ## init ##
   D = 6
@@ -174,62 +188,26 @@ def construct_model_and_sample(user, state, action, \
   else:
     return 0
 
-"""## Constructing the Effect Sizes
+"""## Imputing Effect Sizes
 ---
 Effect size are imputed using the each environment's (stationary/non-stationary) fitted parameters
 """
 
-bern_param_titles = ['Time.of.Day.Bern', \
-                     'Prior.Day.Total.Brush.Time.norm.Bern', \
-                     'Proportion.Brushed.In.Past.7.Days.Bern', \
-                     'Day.Type.Bern']
+with open('sim_env_data/stat_user_effect_sizes.p', 'rb') as f:
+    STAT_USER_EFFECT_SIZES = pickle.load(f)
+with open('sim_env_data/non_stat_user_effect_sizes.p', 'rb') as f:
+    NON_STAT_USER_EFFECT_SIZES = pickle.load(f)
 
-y_param_titles = ['Time.of.Day.Y', \
-                        'Prior.Day.Total.Brush.Time.norm.Y', \
-                     'Proportion.Brushed.In.Past.7.Days.Y', \
-                     'Day.Type.Y']
-
-
-# returns dictionary of effect sizes where the key is the user_id
-# and the value is a tuple where the tuple[0] is the bernoulli effect size
-# and tuple[1] is the effect size on y
-# users are grouped by their base model type first when calculating imputed effect sizes
-def get_effect_sizes(parameter_df):
-    hurdle_df = parameter_df[parameter_df['Model Type'] == 'sqrt_norm']
-    zip_df = parameter_df[parameter_df['Model Type'] == 'zero_infl']
-    ### HURDLE ###
-    # effect size mean
-    hurdle_bern_mean = np.mean(np.mean(np.abs(np.array([hurdle_df[title] for title in bern_param_titles])), axis=1))
-    hurdle_y_mean = np.mean(np.mean(np.abs(np.array([hurdle_df[title] for title in y_param_titles])), axis=1))
-    # effect size std
-    hurdle_bern_std = np.std(np.mean(np.abs(np.array([hurdle_df[title] for title in bern_param_titles])), axis=0))
-    hurdle_y_std = np.std(np.mean(np.abs(np.array([hurdle_df[title] for title in y_param_titles])), axis=0))
-
-    ### ZIP ###
-    # effect size mean
-    zip_bern_mean = np.mean(np.mean(np.abs(np.array([zip_df[title] for title in bern_param_titles])), axis=1))
-    zip_y_mean = np.mean(np.mean(np.abs(np.array([zip_df[title] for title in y_param_titles])), axis=1))
-    # effect size std
-    zip_bern_std = np.std(np.mean(np.abs(np.array([zip_df[title] for title in bern_param_titles])), axis=0))
-    zip_y_std = np.std(np.mean(np.abs(np.array([zip_df[title] for title in y_param_titles])), axis=0))
-
-    ## simulating the effect sizes per user ##
-    user_effect_sizes = {}
-    np.random.seed(1)
-    for user in parameter_df['User']:
-        if np.array(parameter_df[parameter_df['User'] == user])[0][2] == "sqrt_norm":
-            bern_eff_size = np.random.normal(loc=hurdle_bern_mean, scale=hurdle_bern_std)
-            y_eff_size = np.random.normal(loc=hurdle_y_mean, scale=hurdle_y_std)
-        else:
-            bern_eff_size = np.random.normal(loc=zip_bern_mean, scale=zip_bern_std)
-            y_eff_size = np.random.normal(loc=zip_y_mean, scale=zip_y_std)
-
-        user_effect_sizes[user] = [bern_eff_size, y_eff_size]
-
-    return user_effect_sizes
-
-STAT_USER_EFFECT_SIZES = get_effect_sizes(ROBAS_3_STAT_PARAMS_DF)
-NON_STAT_USER_EFFECT_SIZES = get_effect_sizes(ROBAS_3_NON_STAT_PARAMS_DF)
+"""
+Features interacting with effect sizes:
+Note: stationary environments do not have "Day in Study"
+---
+* Time of Day
+* Prior Day Total Brushing Quality
+* Day in Study
+* Weekend vs. Weekday
+* Bias
+"""
 
 print("STAT USER EFFECT SIZES: ", STAT_USER_EFFECT_SIZES)
 print("NON STAT USER EFFECT SIZES: ", NON_STAT_USER_EFFECT_SIZES)
@@ -237,10 +215,10 @@ print("NON STAT USER EFFECT SIZES: ", NON_STAT_USER_EFFECT_SIZES)
 ## USER-SPECIFIC EFFECT SIZES ##
 # Context-Aware with all features same as baseline features excpet for Prop. Non-Zero Brushing In Past 7 Days
 # which is of index 2 for stat models and of index 3 for non stat models
-stat_user_spec_effect_func_bern = lambda state, effect_size: -1.0*max(np.array(4 * [effect_size]) @ np.delete(state, 2), 0)
-stat_user_spec_effect_func_y = lambda state, effect_size: max(np.array(4 * [effect_size]) @ np.delete(state, 2), 0)
-non_stat_user_spec_effect_func_bern = lambda state, effect_size: -1.0*max(np.array(5 * [effect_size]) @ np.delete(state, 3), 0)
-non_stat_user_spec_effect_func_y = lambda state, effect_size: max(np.array(5 * [effect_size]) @ np.delete(state, 3), 0)
+stat_user_spec_effect_func_bern = lambda state, effect_sizes: -1.0*max(effect_sizes @ np.delete(state, 2), 0)
+stat_user_spec_effect_func_y = lambda state, effect_sizes: max(effect_sizes @ np.delete(state, 2), 0)
+non_stat_user_spec_effect_func_bern = lambda state, effect_sizes: -1.0*max(effect_sizes @ np.delete(state, 3), 0)
+non_stat_user_spec_effect_func_y = lambda state, effect_sizes: max(effect_sizes @ np.delete(state, 3), 0)
 
 
 """## Creating Simulation Environment Objects
