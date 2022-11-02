@@ -40,6 +40,23 @@ Y_PARAM_TITLES = ['Time.of.Day.Y', \
                   'Day.in.Study.norm.Y', \
                   'Day.Type.Y']
 
+# effect size masks
+# to ensure that the sign is correct
+# 1. Time of Day - Nonnegative
+# 2. Prior Day Total Brush Time - Negative
+# 3. Day Type - Nonnegative
+# 4. Bias - Nonnegative
+def stat_effect_size_mask(effect_size_vector):
+    return np.array([1, -1, 1, 1]) * np.abs(effect_size_vector)
+
+# 1. Time of Day - Nonnegative
+# 2. Prior Day Total Brush Time - Negative
+# 3. Day in Study - Negative
+# 4. Day Type - Nonnegative
+# 5. Bias - Nonnegative
+def non_stat_effect_size_mask(effect_size_vector):
+    return np.array([1, -1, -1, 1, 1]) * np.abs(effect_size_vector)
+
 
 # returns dictionary of effect sizes where the key is the user_id
 # and the value is a tuple where the tuple[0] is the bernoulli effect size
@@ -48,7 +65,7 @@ Y_PARAM_TITLES = ['Time.of.Day.Y', \
 def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='stat'):
     hurdle_df = parameter_df[parameter_df['Model Type'] == 'sqrt_norm']
     zip_df = parameter_df[parameter_df['Model Type'] == 'zero_infl']
-    shrinkage_value = 2
+    shrinkage_value = 8
     get_mean_across_features = lambda array: np.mean(np.abs(array), axis=1) / shrinkage_value
     get_std_across_users = lambda array: np.std(np.abs(array) / shrinkage_value, axis=1)
     ### HURDLE ###
@@ -56,9 +73,9 @@ def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='
     hurdle_y_param_array = np.array([hurdle_df[title] for title in y_param_titles])
     # effect size bias mean
     hurdle_bern_mean_vector = np.concatenate([get_mean_across_features(hurdle_bern_param_array), \
-    np.mean(get_mean_across_features(hurdle_bern_param_array))], axis=None)
+    2*np.mean(get_mean_across_features(hurdle_bern_param_array))], axis=None)
     hurdle_y_mean_vector = np.concatenate([get_mean_across_features(hurdle_y_param_array), \
-    np.mean(get_mean_across_features(hurdle_y_param_array))], axis=None)
+    2*np.mean(get_mean_across_features(hurdle_y_param_array))], axis=None)
     # effect size bias std
     hurdle_bern_std_diag = np.concatenate([get_std_across_users(hurdle_bern_param_array), \
     np.mean(get_std_across_users(hurdle_bern_param_array))], axis=None)
@@ -70,9 +87,9 @@ def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='
     zip_y_param_array = np.array([zip_df[title] for title in y_param_titles])
     # effect size bias mean
     zip_bern_mean = np.concatenate([get_mean_across_features(zip_bern_param_array), \
-    np.mean(get_mean_across_features(zip_bern_param_array))], axis=None)
+    2*np.max(get_mean_across_features(zip_bern_param_array))], axis=None)
     zip_y_mean = np.concatenate([get_mean_across_features(zip_y_param_array), \
-    np.mean(get_mean_across_features(zip_y_param_array))], axis=None)
+    2*np.max(get_mean_across_features(zip_y_param_array))], axis=None)
     # effect size bias std
     zip_bern_std = np.concatenate([get_std_across_users(hurdle_bern_param_array), \
     np.mean(get_std_across_users(zip_bern_param_array))], axis=None)
@@ -89,6 +106,7 @@ def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='
     print("ZIP STD", zip_y_std)
 
     ## simulating the effect sizes per user ##
+    masking_func = stat_effect_size_mask if eny_type=='stat' else non_stat_effect_size_mask
     user_effect_sizes = {}
     np.random.seed(1)
     for user in parameter_df['User']:
@@ -99,13 +117,13 @@ def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='
             bern_eff_size = np.random.multivariate_normal(zip_bern_mean, np.diag(zip_bern_std))
             y_eff_size = np.random.multivariate_normal(zip_y_mean, np.diag(zip_y_std))
 
-        user_effect_sizes[user] = [bern_eff_size, y_eff_size]
+        user_effect_sizes[user] = [masking_func(bern_eff_size), masking_func(y_eff_size)]
 
     return user_effect_sizes
 
 STAT_USER_EFFECT_SIZES = get_effect_sizes(ROBAS_3_STAT_PARAMS_DF, BERN_PARAM_TITLES[:2] + BERN_PARAM_TITLES[3:], \
 Y_PARAM_TITLES[:2] + Y_PARAM_TITLES[3:])
-NON_STAT_USER_EFFECT_SIZES = get_effect_sizes(ROBAS_3_NON_STAT_PARAMS_DF, BERN_PARAM_TITLES, Y_PARAM_TITLES)
+NON_STAT_USER_EFFECT_SIZES = get_effect_sizes(ROBAS_3_NON_STAT_PARAMS_DF, BERN_PARAM_TITLES, Y_PARAM_TITLES, 'non_stat')
 
 print("STAT USER EFFECT SIZES: ", STAT_USER_EFFECT_SIZES)
 print("NON STAT USER EFFECT SIZES: ", NON_STAT_USER_EFFECT_SIZES)

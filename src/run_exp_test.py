@@ -4,7 +4,7 @@ import simulation_environment
 import pickle
 import numpy as np
 
-NUM_TRIAL_USERS = 12
+NUM_TRIAL_USERS = 72
 def get_user_list(study_idxs):
     user_list = [simulation_environment.USER_INDICES[idx] for idx in study_idxs]
 
