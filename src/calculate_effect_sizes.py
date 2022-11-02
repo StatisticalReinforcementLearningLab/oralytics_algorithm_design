@@ -78,14 +78,14 @@ def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='
     zip_y_std = np.concatenate([get_std_across_users(hurdle_bern_param_array), \
     np.mean(get_std_across_users(zip_y_param_array))], axis=None)
 
-    print("HURDLE MEAN", hurdle_bern_mean_vector)
-    print("HURDLE MEAN", hurdle_y_mean_vector)
-    print("HURDLE STD", hurdle_bern_std_diag)
-    print("HURDLE STD", hurdle_y_std_diag)
-    print("ZIP MEAN", zip_bern_mean)
-    print("ZIP STD", zip_bern_std)
-    print("ZIP MEAN", zip_y_mean)
-    print("ZIP STD", zip_y_std)
+    print("HURDLE BERN MEAN", hurdle_bern_mean_vector)
+    print("HURDLE BERN STD", hurdle_bern_std_diag)
+    print("HURDLE Y MEAN", hurdle_y_mean_vector)
+    print("HURDLE Y STD", hurdle_y_std_diag)
+    print("ZIP BERN MEAN", zip_bern_mean)
+    print("ZIP BERN STD", zip_bern_std)
+    print("ZIP Y MEAN", zip_y_mean)
+    print("ZIP Y STD", zip_y_std)
 
     ## simulating the effect sizes per user ##
     masking_func = stat_effect_size_mask if eny_type=='stat' else non_stat_effect_size_mask
