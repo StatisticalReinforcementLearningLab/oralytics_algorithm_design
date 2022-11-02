@@ -4,24 +4,6 @@ import pandas as pd
 import numpy as np
 import pickle
 
-class SimulationEnvironment():
-    def __init__(self, users_list, process_env_state_func, user_envs):
-        # List: users in the environment (can repeat)
-        self.users_list = users_list
-        # Func
-        self.process_env_state = process_env_state_func
-        # Dict: key: int trial_user_idx, val: user environment object
-        self.all_user_envs = user_envs
-
-    def generate_rewards(self, user_idx, state, action):
-        return self.all_user_envs[user_idx].generate_reward(state, action)
-
-    def get_states_for_user(self, user_idx):
-        return self.all_user_envs[user_idx].get_states()
-
-    def get_users(self):
-        return self.users_list
-
 ROBAS_3_STAT_PARAMS_DF = pd.read_csv('sim_env_data/stat_user_models.csv')
 ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('sim_env_data/non_stat_user_models.csv')
 
