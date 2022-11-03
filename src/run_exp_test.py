@@ -1,6 +1,7 @@
 import rl_experiments
 import rl_algorithm
 import simulation_environment
+import smoothing_function
 import pickle
 import numpy as np
 
@@ -14,7 +15,8 @@ MAX_SEED_VAL = 1
 
 def main():
     ## HANDLING RL ALGORITHM CANDIDATE ##
-    alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], 13, rl_algorithm.GENERALIZED_LOGISTIC_FUNC)
+    alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 13, smoothing_function.BASIC_THOMPSON_SAMPLING_FUNC)
+    # alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], 13, rl_algorithm.GENERALIZED_LOGISTIC_FUNC)
 
     for current_seed in range(MAX_SEED_VAL):
         # draw different users per trial

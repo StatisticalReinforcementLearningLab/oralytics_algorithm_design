@@ -88,6 +88,7 @@ def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
 
   return brushing_quality - C
 
+### ANNA TODO: CAN PROBABLY DELETE ###
 ## HELPERS ##
 def sigmoid(x):
   return 1 / (1 + np.exp(-x))
@@ -189,36 +190,11 @@ def get_beta_posterior_draws(posterior_mean, posterior_var):
 # we calculate the posterior probability of P(R_1 > R_0) clipped
 # we make a Bernoulli draw with prob. P(R_1 > R_0) of the action
 def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_func):
+  # print("DOT PRODUCT", beta_posterior_draws @ advantage_state)
   posterior_prob = np.mean(smoothing_func(beta_posterior_draws @ advantage_state))
   clipped_prob = max(min(MAX_CLIP_VALUE, posterior_prob), MIN_CLIP_VALUE)
 
   return bernoulli.rvs(clipped_prob), clipped_prob
-
-"""### Smoothing Functions
----
-"""
-# traditional Thompson Sampling
-BASIC_THOMPSON_SAMPLING_FUNC = lambda x: x > 0
-
-# generalized logistic function https://en.wikipedia.org/wiki/Generalised_logistic_function
-# lower and upper asymptotes
-L_min = 0.1
-L_max = 0.9
-# larger values of b > 0 makes curve more "steep"
-B_logistic = 3
-# larger values of c > 0 shifts the value of function(0) to the right
-C_logistic = 6
-# larger values of k > 0 makes the asmptote towards upper clipping less steep
-# and the asymptote towards the lower clipping more steep
-K_logistic = 1
-
-def genearlized_logistic_func(x):
-    num = L_max - L_min
-    denom = (1 + C_logistic * np.exp(-B_logistic * x))**K_logistic
-
-    return L_min + (num / denom)
-
-GENERALIZED_LOGISTIC_FUNC = lambda x: np.apply_along_axis(genearlized_logistic_func, 0, x)
 
 """### BLR Algorithm Object
 ---
@@ -294,8 +270,10 @@ class BlrNoActionCentering(BayesianLinearRegression):
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage
         self.feature_dim = D_baseline + D_advantage
-        self.PRIOR_MU = np.zeros(D_baseline + D_advantage)
-        self.PRIOR_SIGMA = 5 * np.eye(len(self.PRIOR_MU))
+        self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0])
+        sigma_beta = 29.624
+        self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 12.989**2, 46.240**2, \
+                                             sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2]))
         self.posterior_mean = np.copy(self.PRIOR_MU)
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
 
