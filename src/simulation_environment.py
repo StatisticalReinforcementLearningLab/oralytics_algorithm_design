@@ -209,9 +209,6 @@ Note: stationary environments do not have "Day in Study"
 * Bias
 """
 
-print("STAT USER EFFECT SIZES: ", STAT_USER_EFFECT_SIZES)
-print("NON STAT USER EFFECT SIZES: ", NON_STAT_USER_EFFECT_SIZES)
-
 ## USER-SPECIFIC EFFECT SIZES ##
 # Context-Aware with all features same as baseline features excpet for Prop. Non-Zero Brushing In Past 7 Days
 # which is of index 2 for stat models and of index 3 for non stat models
@@ -230,7 +227,7 @@ class UserEnvironment():
     def __init__(self, user_id, env_type, unresponsive_val):
         self.user_id = user_id
         self.model_type = np.array(ROBAS_3_STAT_PARAMS_DF[ROBAS_3_STAT_PARAMS_DF['User'] == user_id])[0][2] \
-        if env_type == 'stat' else np.array(ROBAS_3_NON_STAT_PARAMS_DF[ROBAS_3_NON_STAT_PARAMS_DF['User'] == user])[0][2]
+        if env_type == 'stat' else np.array(ROBAS_3_NON_STAT_PARAMS_DF[ROBAS_3_NON_STAT_PARAMS_DF['User'] == user_id])[0][2]
         # vector: size (T, D) where D = 6 is the dimension of the env. state
         # T is the length of the study
         self.user_states = USERS_SESSIONS_STAT[user_id] if env_type == 'stat' else USERS_SESSIONS_NON_STAT[user_id]

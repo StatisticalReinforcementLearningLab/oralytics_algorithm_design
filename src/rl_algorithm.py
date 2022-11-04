@@ -30,11 +30,6 @@ class RLAlgorithm():
     def get_update_cadence(self):
         return self.update_cadence
 
-## CLIPPING VALUES ##
-MIN_CLIP_VALUE = 0.1
-MAX_CLIP_VALUE = 0.9
-#MIN_CLIP_VALUE = 0.35
-#MAX_CLIP_VALUE = 0.75
 # Advantage Time Feature Dimensions
 D_advantage = 4
 # Baseline Time Feature Dimensions
@@ -190,11 +185,10 @@ def get_beta_posterior_draws(posterior_mean, posterior_var):
 # we calculate the posterior probability of P(R_1 > R_0) clipped
 # we make a Bernoulli draw with prob. P(R_1 > R_0) of the action
 def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_func):
-  # print("DOT PRODUCT", beta_posterior_draws @ advantage_state)
-  posterior_prob = np.mean(smoothing_func(beta_posterior_draws @ advantage_state))
-  clipped_prob = max(min(MAX_CLIP_VALUE, posterior_prob), MIN_CLIP_VALUE)
+  # Note: the smoothing function inherently clips between L_min and L_max
+  smooth_posterior_prob = np.mean(smoothing_func(beta_posterior_draws @ advantage_state))
 
-  return bernoulli.rvs(clipped_prob), clipped_prob
+  return bernoulli.rvs(smooth_posterior_prob), smooth_posterior_prob
 
 """### BLR Algorithm Object
 ---

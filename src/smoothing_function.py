@@ -2,39 +2,28 @@ import numpy as np
 """### Smoothing Functions
 ---
 """
-# traditional Thompson Sampling
+### traditional Thompson Sampling ###
 BASIC_THOMPSON_SAMPLING_FUNC = lambda x: x > 0
 
-# generalized logistic function https://en.wikipedia.org/wiki/Generalised_logistic_function
-# lower and upper asymptotes
-L_min = 0.1
-L_max = 0.9
+
+### generalized logistic function ###
+# https://en.wikipedia.org/wiki/Generalised_logistic_function
 # larger values of b > 0 makes curve more "steep"
-B_logistic = 10
+# B_logistic = 6
 # larger values of c > 0 shifts the value of function(0) to the right
 C_logistic = 3
 # larger values of k > 0 makes the asmptote towards upper clipping less steep
 # and the asymptote towards the lower clipping more steep
 K_logistic = 1
 
-# return the value we want for C_logistic
-# rationale := at x = 0, we want the desired generalized logistic value
-def calculate_C_logistic(L_min, L_max, desired_value_at_0):
-    return ((L_max - L_min) / (desired_value_at_0 - L_min)) - 1
+# l_min, l_max are lower and upper asymptotes
+def genearlized_logistic_func(x, l_min, l_max, B):
+    num = l_max - l_min
+    denom = (1 + C_logistic * np.exp(-B * x))**K_logistic
 
-# return the value we want for B_logistic
-# rationale := at x = 0.2, we want the desired generalized logistic value
-def calculate_B_logistic(L_min, L_max, C_logistic, desidesired_value_at_0, desired_value_at_02):
+    return l_min + (num / denom)
 
-    return 0 # ANNA TODO
+def genearlized_logistic_func_wrapper(l_min, l_max, B):
+    smoothing_func = lambda x: genearlized_logistic_func(x, l_min, l_max, B)
 
-# print("0.1, 0.9", calculate_C_logistic(0.1, 0.9, 1.2*0.1))
-# print("0.35, 0.75", calculate_C_logistic(0.35, 0.75, 1.2*0.35))
-
-def genearlized_logistic_func(x):
-    num = L_max - L_min
-    denom = (1 + C_logistic * np.exp(-B_logistic * x))**K_logistic
-
-    return L_min + (num / denom)
-
-GENERALIZED_LOGISTIC_FUNC = lambda x: np.apply_along_axis(genearlized_logistic_func, 0, x)
+    return lambda x: np.apply_along_axis(smoothing_func, 0, x)

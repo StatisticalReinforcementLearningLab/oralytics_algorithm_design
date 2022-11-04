@@ -15,7 +15,9 @@ MAX_SEED_VAL = 1
 
 def main():
     ## HANDLING RL ALGORITHM CANDIDATE ##
-    alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 13, smoothing_function.BASIC_THOMPSON_SAMPLING_FUNC)
+    smoothing_func_candidate = smoothing_function.genearlized_logistic_func_wrapper(0.35, 0.75)
+    alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 13, smoothing_func_candidate)
+    # alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 13, smoothing_function.BASIC_THOMPSON_SAMPLING_FUNC)
     # alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], 13, rl_algorithm.GENERALIZED_LOGISTIC_FUNC)
 
     for current_seed in range(MAX_SEED_VAL):
