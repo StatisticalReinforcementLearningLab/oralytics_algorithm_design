@@ -10,6 +10,6 @@ module load Anaconda/5.0.1-fasrc02
 
 source activate test_env
 
-python3 src/run_rl_experiment.py --sim_env_type=${SIM_ENV} --clipping_vals=${CLIPPING_VALS} --b_logistic=${B_LOGISTIC}
+python3 src/run_rl_experiment.py --sim_env_type=${SIM_ENV} --alg_type=${ALG_TYPE} --b_logistic=${B_LOGISTIC} --clipping_vals=${CLIPPING_VALS}
 
-# python3 src/run_rl_experiment.py --sim_env_type='STAT_LOW_R' --clipping_vals='0.1_0.9' --b_logistic=0.515
+# python3 src/run_rl_experiment.py --sim_env_type='STAT_LOW_R' --alg_type='BLR_NO_AC' --b_logistic=0.515 --clipping_vals='0.1_0.9'

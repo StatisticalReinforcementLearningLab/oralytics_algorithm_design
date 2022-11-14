@@ -24,7 +24,7 @@ def compute_num_updates(users_groups, update_cadence):
     return int(num_updates)
 
 FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality', 'state.tod', 'state.b.bar',\
- 'state.a.bar', 'state.day.type', 'state.bias']
+ 'state.a.bar', 'state.bias']
 
 def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
     N = len(users_groups)
@@ -97,7 +97,7 @@ def compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
         actions = get_data_df_values_for_users(data_df, [user_idx], day_in_study, "action").flatten()
         # ANNA TODO: need to create a function that takes the baseline features and returns the
         # advantage features
-        big_phi = alg_candidate.feature_map(rl_algorithm.get_adv_state(alg_state),\
+        big_phi = alg_candidate.feature_map(alg_state,\
                                             alg_state,\
                                             probs,\
                                             actions)
@@ -132,9 +132,10 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             user_idx, user_entry_date = int(user_tuple[0]), int(user_tuple[1])
             user_states = sim_env.get_states_for_user(user_idx)
             # do action selection for 14 decision times (7 days)
-            for decision_idx in range(14):
+            for decision_idx in range(update_cadence + 1):
                 ## PROCESS STATE ##
-                j = (week - 1 - user_entry_date) * 14 + decision_idx
+                ### ANNA TODO: check that this works ###
+                # j = (week - 1 - user_entry_date) * 14 + decision_idx
                 user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j,  'quality').flatten()
                 user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j,  'action').flatten()
                 env_state = sim_env.process_env_state(user_states[j], j, user_qualities)
@@ -145,7 +146,7 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
                 else:
                     b_bar = rl_algorithm.calculate_b_bar(user_qualities[-14:])
                     a_bar = rl_algorithm.calculate_a_bar(user_actions[-14:])
-                advantage_state, baseline_state = alg_candidate.process_alg_state_func(env_state, sim_env.env_type, b_bar, a_bar)
+                advantage_state, baseline_state = alg_candidate.process_alg_state_func(env_state, b_bar, a_bar)
                 ## ACTION SELECTION ##
                 action, action_prob = alg_candidate.action_selection(advantage_state)
                 ## REWARD GENERATION ##

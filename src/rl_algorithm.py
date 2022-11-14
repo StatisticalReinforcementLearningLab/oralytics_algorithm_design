@@ -33,7 +33,7 @@ class RLAlgorithm():
 # Advantage Time Feature Dimensions
 D_advantage = 4
 # Baseline Time Feature Dimensions
-D_baseline = 5
+D_baseline = 4
 # Number of Posterior Draws
 NUM_POSTERIOR_SAMPLES = 5000
 
@@ -83,34 +83,28 @@ def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
 
   return brushing_quality - C
 
-### ANNA TODO: CAN PROBABLY DELETE ###
-## HELPERS ##
-def sigmoid(x):
-  return 1 / (1 + np.exp(-x))
-
 ## baseline: ##
 # 0 - time of day
 # 1 - b bar
 # 2 - a bar
-# 3 - weekend vs. week day
-# 4 - bias
+# 3 - bias
 ## advantage: ##
 # 0 - time of day
 # 1 - b bar
 # 2 - a bar
 # 3 - bias
-def get_adv_state(baseline_state):
-    # if baseline state is a single array
-    if len(baseline_state.shape) < 2:
-        return np.delete(baseline_state, 3)
-    else:
-        return np.delete(baseline_state, 3, 1)
 
-def process_alg_state(env_state, env_type, b_bar, a_bar):
-    day_type = env_state[3] if env_type == 'stat' else env_state[4]
+# def get_adv_state(baseline_state):
+#     # if baseline state is a single array
+#     if len(baseline_state.shape) < 2:
+#         return np.delete(baseline_state, 3)
+#     else:
+#         return np.delete(baseline_state, 3, 1)
+
+def process_alg_state(env_state, b_bar, a_bar):
     baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
-                               calculate_a_bar(a_bar), day_type, 1])
-    advantage_state = get_adv_state(baseline_state)
+                               calculate_a_bar(a_bar), 1])
+    advantage_state = np.copy(baseline_state)
 
     return advantage_state, baseline_state
 
@@ -193,19 +187,6 @@ def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_fu
 """### BLR Algorithm Object
 ---
 """
-
-## baseline: ##
-# 0 - time of day
-# 1 - b bar
-# 2 - a bar
-# 3 - weekend vs. week day
-# 4 - bias
-## advantage: ##
-# 0 - time of day
-# 1 - b bar
-# 2 - a bar
-# 3 - bias
-
 class BayesianLinearRegression(RLAlgorithmExperimentCandidate):
     def __init__(self, cost_params, update_cadence, smoothing_func):
         super(BayesianLinearRegression, self).__init__(cost_params, update_cadence, smoothing_func)
@@ -223,8 +204,7 @@ class BayesianLinearRegression(RLAlgorithmExperimentCandidate):
         return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
 
     def update(self, alg_states, actions, pis, rewards):
-        advantage_states = get_adv_state(alg_states)
-        Phi = self.feature_map(advantage_states, alg_states, actions, pis)
+        Phi = self.feature_map(alg_states, alg_states, actions, pis)
         posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
         self.posterior_mean = posterior_mean
         self.posterior_var = posterior_var
@@ -241,11 +221,9 @@ class BlrActionCentering(BayesianLinearRegression):
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage + D_advantage
         self.feature_dim = D_baseline + D_advantage + D_advantage
-        self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0])
-        # self.PRIOR_MU = np.zeros(D_baseline + D_advantage + D_advantage)
-        # self.PRIOR_SIGMA = 5 * np.eye(len(self.PRIOR_MU))
+        self.PRIOR_MU = np.array([0, 4.925, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0])
         sigma_beta = 29.624
-        self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 12.989**2, 46.240**2, \
+        self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 46.240**2, \
                                              sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2,\
                                              sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2]))
         self.posterior_mean = np.copy(self.PRIOR_MU)
@@ -264,9 +242,9 @@ class BlrNoActionCentering(BayesianLinearRegression):
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage
         self.feature_dim = D_baseline + D_advantage
-        self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0])
+        self.PRIOR_MU = np.array([0, 4.925, 0, 82.209, 0, 0, 0, 0])
         sigma_beta = 29.624
-        self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 12.989**2, 46.240**2, \
+        self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 46.240**2, \
                                              sigma_beta**2, sigma_beta**2, sigma_beta**2, sigma_beta**2]))
         self.posterior_mean = np.copy(self.PRIOR_MU)
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
