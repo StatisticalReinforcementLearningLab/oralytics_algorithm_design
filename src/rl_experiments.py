@@ -135,7 +135,7 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             for decision_idx in range(update_cadence + 1):
                 ## PROCESS STATE ##
                 ### ANNA TODO: check that this works ###
-                # j = (week - 1 - user_entry_date) * 14 + decision_idx
+                j = (week - 1 - user_entry_date) * 14 + decision_idx
                 user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j,  'quality').flatten()
                 user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j,  'action').flatten()
                 env_state = sim_env.process_env_state(user_states[j], j, user_qualities)
