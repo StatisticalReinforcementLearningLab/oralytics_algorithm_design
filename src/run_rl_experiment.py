@@ -68,9 +68,9 @@ def main(_argv):
     print("CLIPPING VALUES: [{}, {}]".format(L_min, L_max))
     smoothing_func_candidate = smoothing_function.genearlized_logistic_func_wrapper(L_min, L_max, b_logistic)
     if FLAGS.alg_type == 'BLR_AC':
-        alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 13, smoothing_func_candidate)
+        alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 14, smoothing_func_candidate)
     elif FLAGS.alg_type == 'BLR_NO_AC':
-        alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], 13, smoothing_func_candidate)
+        alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], 14, smoothing_func_candidate)
     else:
         print("ERROR: NO ALG_TYPE FOUND - ", FLAGS.alg_type)
     print("ALG TYPE: {}".format(FLAGS.alg_type))

@@ -19,7 +19,7 @@ def compute_num_updates(users_groups, update_cadence):
     last_group_idx = max(users_groups[:,1].astype(int))
     num_study_decision_times = (last_group_idx + TRIAL_LENGTH_IN_WEEKS) * 7 * 2
     # we subtract 1 because we do not update after the final week of the study
-    num_updates = (num_study_decision_times / update_cadence) - 1
+    num_updates = num_study_decision_times / update_cadence
 
     return int(num_updates)
 
@@ -44,12 +44,12 @@ def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
     ### udpate df ###
     update_dict = {}
     num_updates = compute_num_updates(users_groups, update_cadence)
-    update_dict['update_t'] = np.arange(0, num_updates + 1)
+    update_dict['update_t'] = np.arange(0, num_updates)
     for i in range(rl_algorithm_feature_dim):
-        update_dict['posterior_mu.{}'.format(i)] = np.full(num_updates + 1, np.nan)
+        update_dict['posterior_mu.{}'.format(i)] = np.full(num_updates, np.nan)
     for i in range(rl_algorithm_feature_dim):
         for j in range(rl_algorithm_feature_dim):
-            update_dict['posterior_var.{}.{}'.format(i, j)] = np.full(num_updates + 1, np.nan)
+            update_dict['posterior_var.{}.{}'.format(i, j)] = np.full(num_updates, np.nan)
     update_df = pd.DataFrame.from_dict(update_dict)
     ### estimating eqns df ###
     estimating_eqns_dict = {}
@@ -132,7 +132,7 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             user_idx, user_entry_date = int(user_tuple[0]), int(user_tuple[1])
             user_states = sim_env.get_states_for_user(user_idx)
             # do action selection for 14 decision times (7 days)
-            for decision_idx in range(update_cadence + 1):
+            for decision_idx in range(update_cadence):
                 ## PROCESS STATE ##
                 ### ANNA TODO: check that this works ###
                 j = (week - 1 - user_entry_date) * 14 + decision_idx

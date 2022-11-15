@@ -5,7 +5,8 @@ import smoothing_function
 import pickle
 import numpy as np
 
-NUM_TRIAL_USERS = 72
+# NUM_TRIAL_USERS must be a multiple of 4 which is the recruitment rate
+NUM_TRIAL_USERS = 8
 def get_user_list(study_idxs):
     user_list = [simulation_environment.USER_INDICES[idx] for idx in study_idxs]
 
@@ -15,10 +16,8 @@ MAX_SEED_VAL = 1
 
 def main():
     ## HANDLING RL ALGORITHM CANDIDATE ##
-    smoothing_func_candidate = smoothing_function.genearlized_logistic_func_wrapper(0.35, 0.75)
-    alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 13, smoothing_func_candidate)
-    # alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 13, smoothing_function.BASIC_THOMPSON_SAMPLING_FUNC)
-    # alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], 13, rl_algorithm.GENERALIZED_LOGISTIC_FUNC)
+    smoothing_func_candidate = smoothing_function.genearlized_logistic_func_wrapper(0.1, 0.9, 0.515)
+    alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 14, smoothing_func_candidate)
 
     for current_seed in range(MAX_SEED_VAL):
         # draw different users per trial
