@@ -15,6 +15,7 @@ flags.DEFINE_string('sim_env_type', None, 'input the simulation environment type
 flags.DEFINE_string('clipping_vals', None, 'input the clipping values')
 flags.DEFINE_string('b_logistic', None, 'input the slope for the smoothing function')
 flags.DEFINE_string('alg_type', None, 'input the RL algorithm candidate type')
+flags.DEFINE_string('update_cadence', None, 'input the number of decision times before the next update')
 
 MAX_SEED_VAL = 100
 NUM_TRIAL_USERS = 72
@@ -67,10 +68,11 @@ def main(_argv):
     b_logistic = float(FLAGS.b_logistic)
     print("CLIPPING VALUES: [{}, {}]".format(L_min, L_max))
     smoothing_func_candidate = smoothing_function.genearlized_logistic_func_wrapper(L_min, L_max, b_logistic)
+    update_cadence = int(FLAGS.update_cadence)
     if FLAGS.alg_type == 'BLR_AC':
-        alg_candidate = rl_algorithm.BlrActionCentering([100, 100], 14, smoothing_func_candidate)
+        alg_candidate = rl_algorithm.BlrActionCentering([100, 100], update_cadence, smoothing_func_candidate)
     elif FLAGS.alg_type == 'BLR_NO_AC':
-        alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], 14, smoothing_func_candidate)
+        alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], update_cadence, smoothing_func_candidate)
     else:
         print("ERROR: NO ALG_TYPE FOUND - ", FLAGS.alg_type)
     print("ALG TYPE: {}".format(FLAGS.alg_type))
