@@ -10,6 +10,14 @@ module load Anaconda/5.0.1-fasrc02
 
 source activate test_env
 
-python3 src/run_rl_experiment.py --sim_env_type=${SIM_ENV} --alg_type=${ALG_TYPE} --b_logistic=${B_LOGISTIC} --clipping_vals=${CLIPPING_VALS}
+python3 src/run_rl_experiment.py --sim_env_type=${SIM_ENV} --alg_type=${ALG_TYPE} \
+--b_logistic=${B_LOGISTIC} --clipping_vals=${CLIPPING_VALS} \
+--update_cadence=${UPDATE_CADENCE} --cluster_size=${CLUSTER_SIZE}
 
-# python3 src/run_rl_experiment.py --sim_env_type='STAT_LOW_R' --alg_type='BLR_NO_AC' --b_logistic=0.515 --clipping_vals='0.1_0.9'
+# python3 src/run_rl_experiment.py --sim_env_type='STAT_LOW_R' --alg_type='BLR_NO_AC' \
+# --b_logistic="0.515" --clipping_vals='0.1_0.9' \
+# --update_cadence="14" --cluster_size="72"
+
+# python3 src/run_rl_experiment.py --sim_env_type='NON_STAT_LOW_R' --alg_type='BLR_AC' \
+# --b_logistic="0.515" --clipping_vals='0.1_0.9' \
+# --update_cadence="2" --cluster_size="1"

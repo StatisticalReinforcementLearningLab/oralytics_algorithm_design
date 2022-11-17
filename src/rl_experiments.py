@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 
 ## GLOBAL VALUES ##
-### ANNA TODO: FOR INITIAL EXPERIMENTS WE ARE NOT DOING INCREMENTAL RECRUITEMENT ###
-### CHANGE BACK TO  `RECRUITMENT_RATE = 4` TO DO INCREMENTAL RECRUITMENT ###
+### CHANGE BACK TO  `RECRUITMENT_RATE = 72` TO NOT DO INCREMENTAL RECRUITMENT ###
 # RECRUITMENT_RATE = 72
 RECRUITMENT_RATE = 4
 TRIAL_LENGTH_IN_WEEKS = 10
@@ -26,7 +25,34 @@ def compute_num_updates(users_groups, update_cadence):
 FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality', 'state.tod', 'state.b.bar',\
  'state.a.bar', 'state.bias']
 
-def create_dfs(users_groups, update_cadence, rl_algorithm_feature_dim):
+def create_dfs_no_pooling(users, update_cadence, rl_algorithm_feature_dim):
+    N = len(users)
+    batch_data_size = N * NUM_DECISION_TIMES
+    ### data df ###
+    data_dict = {}
+    data_dict['user_idx'] = np.repeat(range(N), NUM_DECISION_TIMES)
+    data_dict['user_id'] = np.repeat(users, NUM_DECISION_TIMES)
+    data_dict['user_decision_t'] = np.stack([range(NUM_DECISION_TIMES) for _ in range(N)], axis=0).flatten()
+    data_dict['day_in_study'] = np.stack([1 + (np.arange(NUM_DECISION_TIMES) // 2) for _ in range(N)], axis=0).flatten()
+    for key in FILL_IN_COLS:
+        data_dict[key] = np.full(batch_data_size, np.nan)
+    data_df = pd.DataFrame.from_dict(data_dict)
+    ### udpate df ###
+    update_dict = {}
+    num_updates = int(NUM_DECISION_TIMES / update_cadence)
+    update_dict['user_idx'] = np.repeat(range(N), num_updates)
+    update_dict['user_id'] = np.repeat(users, num_updates)
+    update_dict['update_t'] = np.stack([np.arange(0, num_updates) for _ in range(N)], axis=0).flatten()
+    for i in range(rl_algorithm_feature_dim):
+        update_dict['posterior_mu.{}'.format(i)] = np.full(N * num_updates, np.nan)
+    for i in range(rl_algorithm_feature_dim):
+        for j in range(rl_algorithm_feature_dim):
+            update_dict['posterior_var.{}.{}'.format(i, j)] = np.full(N * num_updates, np.nan)
+    update_df = pd.DataFrame.from_dict(update_dict)
+
+    return data_df, update_df
+
+def create_dfs_full_pooling(users_groups, update_cadence, rl_algorithm_feature_dim):
     N = len(users_groups)
     batch_data_size = N * NUM_DECISION_TIMES
     ### data df ###
@@ -79,8 +105,13 @@ def get_user_data_values_from_decision_t(data_df, user_idx, decision_t, regex_pa
 def set_data_df_values_for_user(data_df, user_idx, decision_time, policy_idx, action, prob, reward, quality, alg_state):
     data_df.loc[(data_df['user_idx'] == user_idx) & (data_df['user_decision_t'] == decision_time), FILL_IN_COLS] = np.concatenate([[policy_idx, action, prob, reward, quality], alg_state])
 
+### for full pooling experiments ###
 def set_update_df_values(update_df, update_t, posterior_mu, posterior_var):
     update_df.iloc[update_df['update_t'] == update_t, 1:] = np.concatenate([posterior_mu, posterior_var.flatten()])
+
+### for no pooling experiments ###
+def set_update_df_values_for_user(update_df, user_idx, update_t, posterior_mu, posterior_var):
+    update_df.iloc[(update_df['update_t'] == update_t) & (update_df['user_idx'] == user_idx), 3:] = np.concatenate([posterior_mu, posterior_var.flatten()])
 
 def set_estimating_eqns_df_values(df, update_t, user_idx, estimating_eqns):
     df.iloc[(df['update_t'] == update_t) & (df['user_idx'] == user_idx), 3:] = estimating_eqns
@@ -103,6 +134,61 @@ def compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
         estimating_eqn = alg_candidate.compute_estimating_equation([big_phi, big_r], n)
         set_estimating_eqns_df_values(estimating_eqns_df, update_t, user_idx, estimating_eqn)
 
+def execute_decision_time(data_df, user_idx, user_states, j, alg_candidate, sim_env, policy_idx):
+    user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j,  'quality').flatten()
+    user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j,  'action').flatten()
+    env_state = sim_env.process_env_state(user_states[j], j, user_qualities)
+    # if first week for user, we impute A bar and B bar
+    if j < 14:
+        b_bar = np.mean(user_qualities) if j > 1 else 0
+        a_bar = np.mean(user_actions) if j > 1 else 0
+    else:
+        b_bar = rl_algorithm.calculate_b_bar(user_qualities[-14:])
+        a_bar = rl_algorithm.calculate_a_bar(user_actions[-14:])
+    advantage_state, baseline_state = alg_candidate.process_alg_state_func(env_state, b_bar, a_bar)
+    ## ACTION SELECTION ##
+    action, action_prob = alg_candidate.action_selection(advantage_state)
+    ## REWARD GENERATION ##
+    # quality definition
+    quality = min(sim_env.generate_rewards(user_idx, env_state, action), 180)
+    reward = alg_candidate.reward_def_func(quality, action, b_bar, a_bar)
+    ## SAVE VALUES ##
+    set_data_df_values_for_user(data_df, user_idx, j, policy_idx, action, action_prob, reward, quality, baseline_state)
+    ## UPDATE UNRESPONSIVENESS ##
+    # if it's after the first week
+    if j >= 14:
+        sim_env.update_responsiveness(user_idx, rl_algorithm.calculate_a1_condition(a_bar),\
+         rl_algorithm.calculate_a2_condition(a_bar), rl_algorithm.calculate_b_condition(b_bar), j)
+
+def run_experiment(alg_candidates, sim_env):
+    env_users = sim_env.get_users()
+    # all alg_candidates have the same update cadence and feature dimension
+    update_cadence = alg_candidates[0].get_update_cadence()
+    data_df, update_df = create_dfs_no_pooling(env_users, update_cadence, alg_candidates[0].feature_dim)
+    policy_idxs = np.zeros(len(env_users))
+    # add in prior values to posterior dataframe
+    for user_idx in range(len(env_users)):
+        set_update_df_values_for_user(update_df, user_idx, 0, \
+        alg_candidates[user_idx].posterior_mean, alg_candidates[user_idx].posterior_var)
+    for j in range(NUM_DECISION_TIMES):
+        print("Decision Time: ", j)
+        for user_idx in range(len(env_users)):
+            alg_candidate = alg_candidates[user_idx]
+            user_states = sim_env.get_states_for_user(user_idx)
+            execute_decision_time(data_df, user_idx, user_states, j, alg_candidate, sim_env, policy_idxs[user_idx])
+            if (j % update_cadence == (update_cadence - 1) and j > 0):
+                day_in_study = 1 + (j // 2)
+                alg_states = get_data_df_values_for_users(data_df, [user_idx], day_in_study, 'state.*')
+                actions = get_data_df_values_for_users(data_df, [user_idx], day_in_study, 'action').flatten()
+                pis = get_data_df_values_for_users(data_df, [user_idx], day_in_study, 'prob').flatten()
+                rewards = get_data_df_values_for_users(data_df, [user_idx], day_in_study, 'reward').flatten()
+                alg_candidate.update(alg_states, actions, pis, rewards)
+                policy_idxs[user_idx] += 1
+                update_idx = int(policy_idxs[user_idx])
+                print("Update Time {} for {}".format(update_idx, user_idx))
+                set_update_df_values_for_user(update_df, user_idx, update_idx, alg_candidate.posterior_mean, alg_candidate.posterior_var)
+
+    return data_df, update_df
 
 # returns a int(NUM_USERS / RECRUITMENT_RATE) x RECRUITMENT_RATE array of user indices
 # row index represents the week that they enter the study
@@ -119,10 +205,11 @@ def pre_process_users(total_trial_users):
 def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
     env_users = sim_env.get_users()
     update_cadence = alg_candidate.get_update_cadence()
-    data_df, update_df, estimating_eqns_df = create_dfs(user_groups, update_cadence, alg_candidate.feature_dim)
+    data_df, update_df, estimating_eqns_df = create_dfs_full_pooling(user_groups, update_cadence, alg_candidate.feature_dim)
     # add in prior values to posterior dataframe
     set_update_df_values(update_df, 0, alg_candidate.posterior_mean, alg_candidate.posterior_var)
     current_groups = user_groups[:RECRUITMENT_RATE]
+    update_idx = 0
     week = 1
     while (len(current_groups) > 0):
         print("Week: ", week)
@@ -133,33 +220,9 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
                 user_idx, user_entry_date = int(user_tuple[0]), int(user_tuple[1])
                 user_states = sim_env.get_states_for_user(user_idx)
                 for decision_idx in range(update_cadence):
-                    ## PROCESS STATE ##
                     j = (week - 1 - user_entry_date) * 14 + (update_idx_within_week * update_cadence) + decision_idx
-                    user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j,  'quality').flatten()
-                    user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j,  'action').flatten()
-                    env_state = sim_env.process_env_state(user_states[j], j, user_qualities)
-                    # if first week for user, we impute A bar and B bar
-                    if j < 14:
-                        b_bar = np.mean(user_qualities) if j > 1 else 0
-                        a_bar = np.mean(user_actions) if j > 1 else 0
-                    else:
-                        b_bar = rl_algorithm.calculate_b_bar(user_qualities[-14:])
-                        a_bar = rl_algorithm.calculate_a_bar(user_actions[-14:])
-                    advantage_state, baseline_state = alg_candidate.process_alg_state_func(env_state, b_bar, a_bar)
-                    ## ACTION SELECTION ##
-                    action, action_prob = alg_candidate.action_selection(advantage_state)
-                    ## REWARD GENERATION ##
-                    # quality definition
-                    quality = min(sim_env.generate_rewards(user_idx, env_state, action), 180)
-                    reward = alg_candidate.reward_def_func(quality, action, b_bar, a_bar)
-                    ## SAVE VALUES ##
-                    set_data_df_values_for_user(data_df, user_idx, j, week - 1, action, action_prob, reward, quality, baseline_state)
-                    ## UPDATE UNRESPONSIVENESS ##
-                    # if it's after the first week
-                    if j >= 14:
-                        sim_env.update_responsiveness(user_idx, rl_algorithm.calculate_a1_condition(a_bar),\
-                         rl_algorithm.calculate_a2_condition(a_bar), rl_algorithm.calculate_b_condition(b_bar), j)
-
+                    user_states = sim_env.get_states_for_user(user_idx)
+                    execute_decision_time(data_df, user_idx, user_states, j, alg_candidate, sim_env, update_idx)
             ### UPDATE TIME ###
             day_in_study = 1 + (week - 1) * 7 + (update_idx_within_week + decision_idx // 2)
             current_user_idxs = current_groups[:,0].astype(int)

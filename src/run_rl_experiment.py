@@ -7,15 +7,17 @@ import smoothing_function
 import pickle
 import numpy as np
 import pandas as pd
+import copy
 
 # abseil ref: https://abseil.io/docs/python/guides/flags
 FLAGS = flags.FLAGS
 # flags.DEFINE_string('seed', None, 'input the seed value')
 flags.DEFINE_string('sim_env_type', None, 'input the simulation environment type')
+flags.DEFINE_string('alg_type', None, 'input the RL algorithm candidate type')
 flags.DEFINE_string('clipping_vals', None, 'input the clipping values')
 flags.DEFINE_string('b_logistic', None, 'input the slope for the smoothing function')
-flags.DEFINE_string('alg_type', None, 'input the RL algorithm candidate type')
 flags.DEFINE_string('update_cadence', None, 'input the number of decision times before the next update')
+flags.DEFINE_string('cluster_size', None, 'input the cluster_size')
 
 MAX_SEED_VAL = 100
 NUM_TRIAL_USERS = 72
@@ -25,40 +27,36 @@ def get_user_list(study_idxs):
 
     return user_list
 
-def run_experiment(alg_candidate, current_seed):
+def get_sim_env(current_seed):
     # draw different users per trial
     print("SEED: ", current_seed)
-    STUDY_IDXS = np.random.choice(simulation_environment.NUM_USERS, size=NUM_TRIAL_USERS)
+    np.random.seed(current_seed)
+    study_idxs = np.random.choice(simulation_environment.NUM_USERS, size=NUM_TRIAL_USERS)
 
     # get user ids corresponding to index
-    USERS_LIST = get_user_list(STUDY_IDXS)
-    print(USERS_LIST)
+    users_list = get_user_list(study_idxs)
+    print(users_list)
 
     ## HANDLING SIMULATION ENVIRONMENT ##
     env_type = FLAGS.sim_env_type
     if env_type == 'STAT_LOW_R':
-        environment_module = simulation_environment.STAT_LOW_R(USERS_LIST)
+        environment_module = simulation_environment.STAT_LOW_R(users_list)
     elif env_type == 'STAT_MED_R':
-        environment_module = simulation_environment.STAT_MED_R(USERS_LIST)
+        environment_module = simulation_environment.STAT_MED_R(users_list)
     elif env_type == 'STAT_HIGH_R':
-        environment_module = simulation_environment.STAT_HIGH_R(USERS_LIST)
+        environment_module = simulation_environment.STAT_HIGH_R(users_list)
     elif env_type == 'NON_STAT_LOW_R':
-        environment_module = simulation_environment.NON_STAT_LOW_R(USERS_LIST)
+        environment_module = simulation_environment.NON_STAT_LOW_R(users_list)
     elif env_type == 'NON_STAT_MED_R':
-        environment_module = simulation_environment.NON_STAT_MED_R(USERS_LIST)
+        environment_module = simulation_environment.NON_STAT_MED_R(users_list)
     elif env_type == 'NON_STAT_HIGH_R':
-        environment_module = simulation_environment.NON_STAT_HIGH_R(USERS_LIST)
+        environment_module = simulation_environment.NON_STAT_HIGH_R(users_list)
     else:
         print("ERROR: NO ENV_TYPE FOUND - ", env_type)
 
     print("PROCESSED ENV_TYPE {}".format(env_type))
 
-    ## RUN EXPERIMENT ##
-    # Full Pooling with Incremental Recruitment
-    user_groups = rl_experiments.pre_process_users(USERS_LIST)
-    data_df, update_df, estimating_eqns_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
-
-    return data_df, update_df, estimating_eqns_df
+    return users_list, environment_module
 
 # parses argv to access FLAGS
 def main(_argv):
@@ -77,17 +75,32 @@ def main(_argv):
         print("ERROR: NO ALG_TYPE FOUND - ", FLAGS.alg_type)
     print("ALG TYPE: {}".format(FLAGS.alg_type))
 
-    for current_seed in range(MAX_SEED_VAL):
-        np.random.seed(current_seed)
-        data_df, update_df, estimating_eqns_df = run_experiment(alg_candidate, current_seed)
-        data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
-        update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
-        estimating_eqns_df_pickle_location = 'pickle_results/{}_{}_{}_{}_estimating_eqns_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
+    cluster_size = int(FLAGS.cluster_size)
+    if cluster_size == 1:
+        alg_candidates = [copy.deepcopy(alg_candidate) for _ in range(NUM_TRIAL_USERS)]
+        for current_seed in range(MAX_SEED_VAL):
+            _, environment_module = get_sim_env(current_seed)
+            data_df, update_df = rl_experiments.run_experiment(alg_candidates, environment_module)
+            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
+            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
 
-        print("TRIAL DONE, PICKLING NOW")
-        pd.to_pickle(data_df, data_df_pickle_location)
-        pd.to_pickle(update_df, update_df_pickle_location)
-        pd.to_pickle(estimating_eqns_df, estimating_eqns_df_pickle_location)
+            print("TRIAL DONE, PICKLING NOW")
+            pd.to_pickle(data_df, data_df_pickle_location)
+            pd.to_pickle(update_df, update_df_pickle_location)
+
+    elif cluster_size == NUM_TRIAL_USERS:
+        for current_seed in range(MAX_SEED_VAL):
+            users_list, environment_module = get_sim_env(current_seed)
+            user_groups = rl_experiments.pre_process_users(users_list)
+            data_df, update_df, estimating_eqns_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
+            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
+            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
+            estimating_eqns_df_pickle_location = 'pickle_results/{}_{}_{}_{}_estimating_eqns_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
+
+            print("TRIAL DONE, PICKLING NOW")
+            pd.to_pickle(data_df, data_df_pickle_location)
+            pd.to_pickle(update_df, update_df_pickle_location)
+            pd.to_pickle(estimating_eqns_df, estimating_eqns_df_pickle_location)
 
 if __name__ == '__main__':
     app.run(main)
