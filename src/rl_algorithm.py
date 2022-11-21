@@ -94,13 +94,6 @@ def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
 # 2 - a bar
 # 3 - bias
 
-# def get_adv_state(baseline_state):
-#     # if baseline state is a single array
-#     if len(baseline_state.shape) < 2:
-#         return np.delete(baseline_state, 3)
-#     else:
-#         return np.delete(baseline_state, 3, 1)
-
 def process_alg_state(env_state, b_bar, a_bar):
     baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
                                calculate_a_bar(a_bar), 1])

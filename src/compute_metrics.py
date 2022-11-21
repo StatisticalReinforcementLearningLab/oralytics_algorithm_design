@@ -36,7 +36,7 @@ def format_qualities(string_prefix):
         print("Couldn't for {}".format(pickle_name))
     # user_idx is both the unique identifier and an index
     for user_idx in np.unique(data_df['user_idx']):
-        user_qualities = get_data_df_values_for_users(data_df, [user_idx], 'reward').flatten()
+        user_qualities = get_data_df_values_for_users(data_df, [user_idx], 'quality').flatten()
         total_qualities[i][user_idx] = user_qualities
 
   return total_qualities
