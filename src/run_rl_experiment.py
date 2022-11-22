@@ -81,8 +81,8 @@ def main(_argv):
         for current_seed in range(MAX_SEED_VAL):
             _, environment_module = get_sim_env(current_seed)
             data_df, update_df = rl_experiments.run_experiment(alg_candidates, environment_module)
-            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
-            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
+            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
+            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
 
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)
@@ -93,9 +93,9 @@ def main(_argv):
             users_list, environment_module = get_sim_env(current_seed)
             user_groups = rl_experiments.pre_process_users(users_list)
             data_df, update_df, estimating_eqns_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
-            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
-            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
-            estimating_eqns_df_pickle_location = 'pickle_results/{}_{}_{}_{}_estimating_eqns_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, current_seed)
+            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
+            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
+            estimating_eqns_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_estimating_eqns_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
 
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)

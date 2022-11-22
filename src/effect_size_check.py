@@ -23,6 +23,9 @@ Y_PARAM_TITLES = ['Time.of.Day.Y', \
                   'Day.in.Study.norm.Y', \
                   'Day.Type.Y']
 
+SHRINKAGE_VALUE = 8
+# SHRINKAGE_VALUE = 4
+
 # returns dictionary of effect sizes where the key is the user_id
 # and the value is a tuple where the tuple[0] is the bernoulli effect size
 # and tuple[1] is the effect size on y
@@ -30,8 +33,7 @@ Y_PARAM_TITLES = ['Time.of.Day.Y', \
 def get_effect_size_on_intercept(parameter_df, bern_param_titles, y_param_titles):
     hurdle_df = parameter_df[parameter_df['Model Type'] == 'sqrt_norm']
     zip_df = parameter_df[parameter_df['Model Type'] == 'zero_infl']
-    shrinkage_value = 8
-    get_mean_across_features = lambda array: np.mean(np.abs(array), axis=1) / shrinkage_value
+    get_mean_across_features = lambda array: np.mean(np.abs(array), axis=1) / SHRINKAGE_VALUE
     ### HURDLE ###
     hurdle_bern_param_array = np.array([hurdle_df[title] for title in bern_param_titles])
     hurdle_y_param_array = np.array([hurdle_df[title] for title in y_param_titles])
@@ -236,6 +238,7 @@ for user_id in ROBAS_3_USERS:
 
 np.random.seed(1)
 # generating rewards
+NUM_DECISION_TIMES = 140
 STAT_STATES = []
 STAT_REWARDS = []
 STAT_ACTIONS = []
@@ -244,13 +247,15 @@ NON_STAT_REWARDS = []
 NON_STAT_ACTIONS = []
 
 for user_id in ROBAS_3_USERS:
-    for state in users_sessions_stationarity[user_id]:
+    for idx in np.random.choice(len(users_sessions_stationarity[user_id]), NUM_DECISION_TIMES):
+        state = users_sessions_stationarity[user_id][idx]
         for action in range(2):
             STAT_STATES.append(state)
             STAT_ACTIONS.append(action)
             reward = STAT_USER_REWARD_GENERATING_FUNCTIONS[user_id](state, action)
             STAT_REWARDS.append(reward)
-    for state in users_sessions_non_stationarity[user_id]:
+    for idx in np.random.choice(len(users_sessions_non_stationarity[user_id]), NUM_DECISION_TIMES):
+        state = users_sessions_non_stationarity[user_id][idx]
         for action in range(2):
             NON_STAT_STATES.append(state)
             NON_STAT_ACTIONS.append(action)
@@ -278,6 +283,11 @@ stat_sigma_rewards = np.std(STAT_R)
 non_stat_sigma_res = np.std(non_stat_residuals)
 non_stat_sigma_rewards = np.std(NON_STAT_R)
 
+print("STAT STD OF RESIDUALS", stat_sigma_res)
+print("NON-STAT STD OF RESIDUALS", non_stat_sigma_res)
+print("STAT STD OF REWARDS", stat_sigma_rewards)
+print("NON-STAT STD OF REWARDS", non_stat_sigma_rewards)
+
 # standard effect size
 stat_standard_eff_res = STAT_THETA[-1] / stat_sigma_res
 stat_standard_eff_reward = STAT_THETA[-1] / stat_sigma_rewards
@@ -285,8 +295,9 @@ non_stat_standard_eff_res = NON_STAT_THETA[-1] / non_stat_sigma_res
 non_stat_standard_eff_reward = NON_STAT_THETA[-1] / non_stat_sigma_rewards
 
 print("STAT STANDARD EFFECT SIZE (RESIDUALS)", stat_standard_eff_res)
-print("STAT STANDARD EFFECT SIZE (REWARDS)", stat_standard_eff_reward)
 print("NON-STAT STANDARD EFFECT SIZE (RESIDUALS)", non_stat_standard_eff_res)
+print("STAT STANDARD EFFECT SIZE (REWARDS)", stat_standard_eff_reward)
 print("NON-STAT STANDARD EFFECT SIZE (REWARDS)", non_stat_standard_eff_reward)
 
-print(len(STAT_PHI))
+# number of datapoints
+print("NUMBER OF TRAINING DATAPOINTS", len(STAT_PHI))

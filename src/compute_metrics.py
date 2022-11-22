@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 from scipy import stats
 import matplotlib.pyplot as plt
+import itertools
 
 ### GLOBAL VALUES ###
 NUM_TRIAL_USERS = 72
@@ -12,10 +13,18 @@ NUM_TRIALS = 100
 ENV_NAMES = ["STAT_LOW_R", "STAT_MED_R", "STAT_HIGH_R",\
  "NON_STAT_LOW_R", "NON_STAT_MED_R", "NON_STAT_HIGH_R"]
 
-# CLIPPING_VALS = ["0.1_0.9", "0.35_0.75"]
-ALG_TYPES = ["BLR_AC", "BLR_NO_AC"]
-B_LOGISTICS = [0.515, 5]
-ALG_NAMES = ["{}_{}".format(alg_type, b) for alg_type in ALG_TYPES for b in B_LOGISTICS]
+ALG_CANDIDATES = dict(
+    ALG_TYPES=["BLR_AC", "BLR_NO_AC"],
+    B_LOGISTICS=[0.515, 5],
+    CLIPPING_VALS=["0.2_0.8"],
+    UPDATE_CADENCE=[14, 2],
+    CLUSTER_SIZE=[72, 1]
+)
+
+# ALG_NAMES = ["{}_{}".format(alg_type, b) for alg_type in ALG_TYPES for b in B_LOGISTICS]
+ALG_NAMES = ["{}_{}_{}_{}_{}".format(*candidate_params) for candidate_params in itertools.product(*list(ALG_CANDIDATES.values()))]
+print(ALG_NAMES)
+
 
 READ_PATH_PREFIX = "pickle_results/"
 WRITE_PATH_PREFIX = "figures/"
