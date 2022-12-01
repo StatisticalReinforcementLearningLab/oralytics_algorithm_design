@@ -96,7 +96,7 @@ def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
 
 def process_alg_state(env_state, b_bar, a_bar):
     baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
-                               calculate_a_bar(a_bar), 1])
+                               a_bar, 1])
     advantage_state = np.copy(baseline_state)
 
     return advantage_state, baseline_state

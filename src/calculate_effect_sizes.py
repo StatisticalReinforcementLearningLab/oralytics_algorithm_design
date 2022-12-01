@@ -44,10 +44,9 @@ def non_stat_effect_size_mask(effect_size_vector):
 # and the value is a tuple where the tuple[0] is the bernoulli effect size
 # and tuple[1] is the effect size on y
 # users are grouped by their base model type first when calculating imputed effect sizes
-def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='stat'):
+def get_effect_sizes(shrinkage_value, parameter_df, bern_param_titles, y_param_titles, eny_type='stat'):
     hurdle_df = parameter_df[parameter_df['Model Type'] == 'sqrt_norm']
     zip_df = parameter_df[parameter_df['Model Type'] == 'zero_infl']
-    shrinkage_value = 8
     get_mean_across_features = lambda array: np.mean(np.abs(array), axis=1) / shrinkage_value
     get_std_across_users = lambda array: np.std(np.abs(array) / shrinkage_value, axis=1)
     ### HURDLE ###
@@ -103,14 +102,23 @@ def get_effect_sizes(parameter_df, bern_param_titles, y_param_titles, eny_type='
 
     return user_effect_sizes
 
-STAT_USER_EFFECT_SIZES = get_effect_sizes(ROBAS_3_STAT_PARAMS_DF, BERN_PARAM_TITLES[:2] + BERN_PARAM_TITLES[3:], \
+SMALLER_STAT_USER_EFFECT_SIZES = get_effect_sizes(8, ROBAS_3_STAT_PARAMS_DF, BERN_PARAM_TITLES[:2] + BERN_PARAM_TITLES[3:], \
 Y_PARAM_TITLES[:2] + Y_PARAM_TITLES[3:])
-NON_STAT_USER_EFFECT_SIZES = get_effect_sizes(ROBAS_3_NON_STAT_PARAMS_DF, BERN_PARAM_TITLES, Y_PARAM_TITLES, 'non_stat')
+SMALLER_NON_STAT_USER_EFFECT_SIZES = get_effect_sizes(8, ROBAS_3_NON_STAT_PARAMS_DF, BERN_PARAM_TITLES, Y_PARAM_TITLES, 'non_stat')
+LESS_SMALL_STAT_USER_EFFECT_SIZES = get_effect_sizes(4, ROBAS_3_STAT_PARAMS_DF, BERN_PARAM_TITLES[:2] + BERN_PARAM_TITLES[3:], \
+Y_PARAM_TITLES[:2] + Y_PARAM_TITLES[3:])
+LESS_SMALL_NON_STAT_USER_EFFECT_SIZES = get_effect_sizes(4, ROBAS_3_NON_STAT_PARAMS_DF, BERN_PARAM_TITLES, Y_PARAM_TITLES, 'non_stat')
 
-print("STAT USER EFFECT SIZES: ", STAT_USER_EFFECT_SIZES)
-print("NON STAT USER EFFECT SIZES: ", NON_STAT_USER_EFFECT_SIZES)
+print("SMALLER STAT USER EFFECT SIZES: ", SMALLER_STAT_USER_EFFECT_SIZES)
+print("SMALLER NON STAT USER EFFECT SIZES: ", SMALLER_NON_STAT_USER_EFFECT_SIZES)
+print("LESS SMALL STAT USER EFFECT SIZES: ", LESS_SMALL_STAT_USER_EFFECT_SIZES)
+print("LESS SMALL NON STAT USER EFFECT SIZES: ", LESS_SMALL_NON_STAT_USER_EFFECT_SIZES)
 
-with open("sim_env_data/stat_user_effect_sizes.p", 'wb') as f:
-    pickle.dump(STAT_USER_EFFECT_SIZES, f)
-with open("sim_env_data/non_stat_user_effect_sizes.p", 'wb') as f:
-    pickle.dump(NON_STAT_USER_EFFECT_SIZES, f)
+with open("sim_env_data/smaller_stat_user_effect_sizes.p", 'wb') as f:
+    pickle.dump(SMALLER_STAT_USER_EFFECT_SIZES, f)
+with open("sim_env_data/smaller_non_stat_user_effect_sizes.p", 'wb') as f:
+    pickle.dump(SMALLER_NON_STAT_USER_EFFECT_SIZES, f)
+with open("sim_env_data/less_small_stat_user_effect_sizes.p", 'wb') as f:
+    pickle.dump(LESS_SMALL_STAT_USER_EFFECT_SIZES, f)
+with open("sim_env_data/less_small_non_stat_user_effect_sizes.p", 'wb') as f:
+    pickle.dump(LESS_SMALL_NON_STAT_USER_EFFECT_SIZES, f)

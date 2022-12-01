@@ -18,10 +18,14 @@ do
           for CLUSTER_SIZE in 72 1
           do
             export CLUSTER_SIZE
-            sbatch --job-name=job_${SIM_ENV}_${ALG_TYPE}_${B_LOGISTIC}_${CLIPPING_VALS}_${UPDATE_CADENCE}_${CLUSTER_SIZE} \
-            -o outs_and_errs/%j_out.txt -e outs_and_errs/%j_errs.txt \
-            src/run_rl_experiments.sbatch
-            sleep 0.01
+            for EFFECT_SIZE_SCALE in small smaller
+            do
+              export EFFECT_SIZE_SCALE
+              sbatch --job-name=job_${SIM_ENV}_${ALG_TYPE}_${B_LOGISTIC}_${CLIPPING_VALS}_${UPDATE_CADENCE}_${CLUSTER_SIZE}_${EFFECT_SIZE_SCALE} \
+              -o outs_and_errs/%j_out.txt -e outs_and_errs/%j_errs.txt \
+              src/run_rl_experiments.sbatch
+              sleep 0.01
+            done
           done
         done
       done

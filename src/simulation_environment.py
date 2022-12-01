@@ -193,10 +193,14 @@ def construct_model_and_sample(user, state, action, \
 Effect size are imputed using the each environment's (stationary/non-stationary) fitted parameters
 """
 
-with open('sim_env_data/stat_user_effect_sizes.p', 'rb') as f:
-    STAT_USER_EFFECT_SIZES = pickle.load(f)
-with open('sim_env_data/non_stat_user_effect_sizes.p', 'rb') as f:
-    NON_STAT_USER_EFFECT_SIZES = pickle.load(f)
+with open('sim_env_data/smaller_stat_user_effect_sizes.p', 'rb') as f:
+    SMALLER_STAT_USER_EFFECT_SIZES = pickle.load(f)
+with open('sim_env_data/smaller_non_stat_user_effect_sizes.p', 'rb') as f:
+    SMALLER_NON_STAT_USER_EFFECT_SIZES = pickle.load(f)
+with open('sim_env_data/less_small_stat_user_effect_sizes.p', 'rb') as f:
+    LESS_SMALL_STAT_USER_EFFECT_SIZES = pickle.load(f)
+with open('sim_env_data/less_small_non_stat_user_effect_sizes.p', 'rb') as f:
+    LESS_SMALL_NON_STAT_USER_EFFECT_SIZES = pickle.load(f)
 
 """
 Features interacting with effect sizes:
@@ -221,10 +225,20 @@ non_stat_user_spec_effect_func_y = lambda state, effect_sizes: max(effect_sizes 
 """## Creating Simulation Environment Objects
 ---
 """
+def choose_effect_sizes(effect_size_scale, env_type):
+    if env_type == 'stat':
+        if effect_size_scale == 'smaller':
+            return np.array(SMALLER_STAT_USER_EFFECT_SIZES[user_id])
+        elif effect_size_scale == 'small':
+            return np.array(LESS_SMALL_STAT_USER_EFFECT_SIZES[user_id])
+    elif env_type == 'non_stat':
+        if effect_size_scale == 'smaller':
+            return np.array(SMALLER_NON_STAT_USER_EFFECT_SIZES[user_id])
+        elif effect_size_scale == 'small':
+            return np.array(LESS_SMALL_NON_STAT_USER_EFFECT_SIZES[user_id])
 
-### ANNA TODO: think of an easier way to handle stationary vs. non-stationary ###
 class UserEnvironment():
-    def __init__(self, user_id, env_type, unresponsive_val):
+    def __init__(self, user_id, effect_size_scale, env_type, unresponsive_val):
         self.user_id = user_id
         self.model_type = np.array(ROBAS_3_STAT_PARAMS_DF[ROBAS_3_STAT_PARAMS_DF['User'] == user_id])[0][2] \
         if env_type == 'stat' else np.array(ROBAS_3_NON_STAT_PARAMS_DF[ROBAS_3_NON_STAT_PARAMS_DF['User'] == user_id])[0][2]
@@ -232,7 +246,7 @@ class UserEnvironment():
         # T is the length of the study
         self.user_states = USERS_SESSIONS_STAT[user_id] if env_type == 'stat' else USERS_SESSIONS_NON_STAT[user_id]
         # tuple: float values of effect size on bernoulli, poisson components
-        self.og_user_effect_sizes = np.array(STAT_USER_EFFECT_SIZES[user_id]) if env_type == 'stat' else np.array(NON_STAT_USER_EFFECT_SIZES[user_id])
+        self.og_user_effect_sizes = choose_effect_sizes(effect_size_scale, env_type)
         self.user_effect_sizes = np.copy(self.og_user_effect_sizes)
         # float: unresponsive scaling value
         self.unresponsive_val = unresponsive_val
@@ -282,18 +296,18 @@ class UserEnvironment():
         return self.user_effect_sizes
 
 ### SIMULATE DELAYED EFFECTS ###
-def create_user_envs(users_list, unresponsive_val, env_type):
+def create_user_envs(users_list, effect_size_scale, unresponsive_val, env_type):
     all_user_envs = {}
     for i, user in enumerate(users_list):
-      new_user = UserEnvironment(user, env_type, unresponsive_val)
+      new_user = UserEnvironment(user, effect_size_scale, env_type, unresponsive_val)
       all_user_envs[i] = new_user
 
     return all_user_envs
 
 class SimulationEnvironmentExperiment(SimulationEnvironment):
-    def __init__(self, users_list, env_type, unresponsive_val):
+    def __init__(self, users_list, effect_size_scale, env_type, unresponsive_val):
         process_env_state_func = lambda session, j, Qs: process_env_state(session, j, Qs, env_type)
-        user_envs = create_user_envs(users_list, unresponsive_val, env_type)
+        user_envs = create_user_envs(users_list, effect_size_scale, unresponsive_val, env_type)
 
         super(SimulationEnvironmentExperiment, self).__init__(users_list, process_env_state_func, user_envs)
 
@@ -308,9 +322,9 @@ class SimulationEnvironmentExperiment(SimulationEnvironment):
 # These are the values you can tweak for the variants of the simulation environment
 RESPONSIVITY_SCALING_VALS = [0, 0.5, 0.8]
 
-STAT_LOW_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[0])
-STAT_MED_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[1])
-STAT_HIGH_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'stat', RESPONSIVITY_SCALING_VALS[2])
-NON_STAT_LOW_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[0])
-NON_STAT_MED_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[1])
-NON_STAT_HIGH_R = lambda users_list: SimulationEnvironmentExperiment(users_list, 'non_stat', RESPONSIVITY_SCALING_VALS[2])
+STAT_LOW_R = lambda users_list, effect_size_scale: SimulationEnvironmentExperiment(users_list, effect_size_scale, 'stat', RESPONSIVITY_SCALING_VALS[0])
+STAT_MED_R = lambda users_list, effect_size_scale: SimulationEnvironmentExperiment(users_list, effect_size_scale, 'stat', RESPONSIVITY_SCALING_VALS[1])
+STAT_HIGH_R = lambda users_list, effect_size_scale: SimulationEnvironmentExperiment(users_list, effect_size_scale, 'stat', RESPONSIVITY_SCALING_VALS[2])
+NON_STAT_LOW_R = lambda users_list, effect_size_scale: SimulationEnvironmentExperiment(users_list, effect_size_scale, 'non_stat', RESPONSIVITY_SCALING_VALS[0])
+NON_STAT_MED_R = lambda users_list, effect_size_scale: SimulationEnvironmentExperiment(users_list, effect_size_scale, 'non_stat', RESPONSIVITY_SCALING_VALS[1])
+NON_STAT_HIGH_R = lambda users_list, effect_size_scale: SimulationEnvironmentExperiment(users_list, effect_size_scale, 'non_stat', RESPONSIVITY_SCALING_VALS[2])

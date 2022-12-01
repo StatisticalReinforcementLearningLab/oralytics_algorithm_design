@@ -18,6 +18,7 @@ flags.DEFINE_string('clipping_vals', None, 'input the clipping values')
 flags.DEFINE_string('b_logistic', None, 'input the slope for the smoothing function')
 flags.DEFINE_string('update_cadence', None, 'input the number of decision times before the next update')
 flags.DEFINE_string('cluster_size', None, 'input the cluster_size')
+flags.DEFINE_string('effect_size_scale', None, 'input the effect size scale')
 
 MAX_SEED_VAL = 100
 NUM_TRIAL_USERS = 72
@@ -39,18 +40,20 @@ def get_sim_env(current_seed):
 
     ## HANDLING SIMULATION ENVIRONMENT ##
     env_type = FLAGS.sim_env_type
+    # type String ["smaller", "small"]
+    effect_size_scale = FLAGS.effect_size_scale
     if env_type == 'STAT_LOW_R':
-        environment_module = simulation_environment.STAT_LOW_R(users_list)
+        environment_module = simulation_environment.STAT_LOW_R(users_list, effect_size_scale)
     elif env_type == 'STAT_MED_R':
-        environment_module = simulation_environment.STAT_MED_R(users_list)
+        environment_module = simulation_environment.STAT_MED_R(users_list, effect_size_scale)
     elif env_type == 'STAT_HIGH_R':
-        environment_module = simulation_environment.STAT_HIGH_R(users_list)
+        environment_module = simulation_environment.STAT_HIGH_R(users_list, effect_size_scale)
     elif env_type == 'NON_STAT_LOW_R':
-        environment_module = simulation_environment.NON_STAT_LOW_R(users_list)
+        environment_module = simulation_environment.NON_STAT_LOW_R(users_list, effect_size_scale)
     elif env_type == 'NON_STAT_MED_R':
-        environment_module = simulation_environment.NON_STAT_MED_R(users_list)
+        environment_module = simulation_environment.NON_STAT_MED_R(users_list, effect_size_scale)
     elif env_type == 'NON_STAT_HIGH_R':
-        environment_module = simulation_environment.NON_STAT_HIGH_R(users_list)
+        environment_module = simulation_environment.NON_STAT_HIGH_R(users_list, effect_size_scale)
     else:
         print("ERROR: NO ENV_TYPE FOUND - ", env_type)
 
@@ -81,8 +84,8 @@ def main(_argv):
         for current_seed in range(MAX_SEED_VAL):
             _, environment_module = get_sim_env(current_seed)
             data_df, update_df = rl_experiments.run_experiment(alg_candidates, environment_module)
-            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
-            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
+            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
+            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
 
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)
@@ -93,9 +96,9 @@ def main(_argv):
             users_list, environment_module = get_sim_env(current_seed)
             user_groups = rl_experiments.pre_process_users(users_list)
             data_df, update_df, estimating_eqns_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
-            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
-            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
-            estimating_eqns_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_estimating_eqns_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, current_seed)
+            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
+            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
+            estimating_eqns_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_estimating_eqns_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
 
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)

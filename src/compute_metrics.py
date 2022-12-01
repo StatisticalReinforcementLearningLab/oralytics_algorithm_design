@@ -14,15 +14,17 @@ ENV_NAMES = ["STAT_LOW_R", "STAT_MED_R", "STAT_HIGH_R",\
  "NON_STAT_LOW_R", "NON_STAT_MED_R", "NON_STAT_HIGH_R"]
 
 ALG_CANDIDATES = dict(
-    ALG_TYPES=["BLR_AC", "BLR_NO_AC"],
-    B_LOGISTICS=[0.515, 5],
+    # ALG_TYPES=["BLR_AC", "BLR_NO_AC"],
+    ALG_TYPES=["BLR_AC"],
+    B_LOGISTICS=[0.515, 5.15],
     CLIPPING_VALS=["0.2_0.8"],
     UPDATE_CADENCE=[14, 2],
-    CLUSTER_SIZE=[72, 1]
+    CLUSTER_SIZE=[72, 1],
+    EFFECT_SIZE_SCALE=['small', 'smaller']
 )
 
 # ALG_NAMES = ["{}_{}".format(alg_type, b) for alg_type in ALG_TYPES for b in B_LOGISTICS]
-ALG_NAMES = ["{}_{}_{}_{}_{}".format(*candidate_params) for candidate_params in itertools.product(*list(ALG_CANDIDATES.values()))]
+ALG_NAMES = ["{}_{}_{}_{}_{}_{}".format(*candidate_params) for candidate_params in itertools.product(*list(ALG_CANDIDATES.values()))]
 print(ALG_NAMES)
 
 
@@ -64,32 +66,61 @@ def report_lower_25_quality(total_rewards):
 
   return "{:.3f} ({:.3f})".format(round(np.mean(a), 3), round(stats.sem(a), 3))
 
+### x axis is simulation environments ###
 all_avg_qualities = []
 all_lower_25_qualities = []
 
-for ALG_NAME in ALG_NAMES:
-    alg_avg_qualities = []
-    alg_lower_25_qualities = []
-    for SIM_ENV in ENV_NAMES:
+for SIM_ENV in ENV_NAMES:
+    sim_env_avg_qualities = []
+    sim_env_lower_25_qualities = []
+    for ALG_NAME in ALG_NAMES:
         print("FOR {} {}".format(ALG_NAME, SIM_ENV))
         string_prefix = READ_PATH_PREFIX + "{}_{}".format(SIM_ENV, ALG_NAME)
         alg_qualities = format_qualities(string_prefix)
-        alg_avg_qualities.append(report_mean_quality(alg_qualities))
-        alg_lower_25_qualities.append(report_lower_25_quality(alg_qualities))
+        sim_env_avg_qualities.append(report_mean_quality(alg_qualities))
+        sim_env_lower_25_qualities.append(report_lower_25_quality(alg_qualities))
 
-    all_avg_qualities.append(alg_avg_qualities)
-    all_lower_25_qualities.append(alg_lower_25_qualities)
+    all_avg_qualities.append(sim_env_avg_qualities)
+    all_lower_25_qualities.append(sim_env_lower_25_qualities)
 
 # formatting metrics into df and then convert to latex
-total_avg_vals = dict(SIM_ENV=ENV_NAMES)
-avg_vals = {ALG_NAMES[i]: all_avg_qualities[i] for i in range(len(ALG_NAMES))}
+total_avg_vals = dict(ALG_CANDS=ALG_NAMES)
+avg_vals = {ENV_NAMES[i]: all_avg_qualities[i] for i in range(len(ENV_NAMES))}
 total_avg_vals.update(avg_vals)
 df_avg_qualities = pd.DataFrame(total_avg_vals)
 
-total_lower_25_vals = dict(SIM_ENV=ENV_NAMES)
-lower_25_vals = {ALG_NAMES[i]: all_lower_25_qualities[i] for i in range(len(ALG_NAMES))}
+total_lower_25_vals = dict(ALG_CANDS=ALG_NAMES)
+lower_25_vals = {ENV_NAMES[i]: all_lower_25_qualities[i] for i in range(len(ENV_NAMES))}
 total_lower_25_vals.update(lower_25_vals)
 df_lower_25_qualities = pd.DataFrame(total_lower_25_vals)
+
+### x axis is algorithm candidates ###
+# all_avg_qualities = []
+# all_lower_25_qualities = []
+#
+# for ALG_NAME in ALG_NAMES:
+#     alg_avg_qualities = []
+#     alg_lower_25_qualities = []
+#     for SIM_ENV in ENV_NAMES:
+#         print("FOR {} {}".format(ALG_NAME, SIM_ENV))
+#         string_prefix = READ_PATH_PREFIX + "{}_{}".format(SIM_ENV, ALG_NAME)
+#         alg_qualities = format_qualities(string_prefix)
+#         alg_avg_qualities.append(report_mean_quality(alg_qualities))
+#         alg_lower_25_qualities.append(report_lower_25_quality(alg_qualities))
+#
+#     all_avg_qualities.append(alg_avg_qualities)
+#     all_lower_25_qualities.append(alg_lower_25_qualities)
+
+# formatting metrics into df and then convert to latex
+# total_avg_vals = dict(SIM_ENV=ENV_NAMES)
+# avg_vals = {ALG_NAMES[i]: all_avg_qualities[i] for i in range(len(ALG_NAMES))}
+# total_avg_vals.update(avg_vals)
+# df_avg_qualities = pd.DataFrame(total_avg_vals)
+#
+# total_lower_25_vals = dict(SIM_ENV=ENV_NAMES)
+# lower_25_vals = {ALG_NAMES[i]: all_lower_25_qualities[i] for i in range(len(ALG_NAMES))}
+# total_lower_25_vals.update(lower_25_vals)
+# df_lower_25_qualities = pd.DataFrame(total_lower_25_vals)
 
 print(df_avg_qualities.to_latex(index=False))
 print(df_lower_25_qualities.to_latex(index=False))

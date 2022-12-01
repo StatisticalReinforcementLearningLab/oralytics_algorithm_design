@@ -12,12 +12,13 @@ source activate test_env
 
 python3 src/run_rl_experiment.py --sim_env_type=${SIM_ENV} --alg_type=${ALG_TYPE} \
 --b_logistic=${B_LOGISTIC} --clipping_vals=${CLIPPING_VALS} \
---update_cadence=${UPDATE_CADENCE} --cluster_size=${CLUSTER_SIZE}
-
-# python3 src/run_rl_experiment.py --sim_env_type='STAT_LOW_R' --alg_type='BLR_NO_AC' \
-# --b_logistic="0.515" --clipping_vals='0.2_0.8' \
-# --update_cadence="14" --cluster_size="72"
+--update_cadence=${UPDATE_CADENCE} --cluster_size=${CLUSTER_SIZE} \
+--effect_size_scale=${EFFECT_SIZE_SCALE}
 
 # python3 src/run_rl_experiment.py --sim_env_type='NON_STAT_LOW_R' --alg_type='BLR_AC' \
 # --b_logistic="0.515" --clipping_vals='0.2_0.8' \
-# --update_cadence="2" --cluster_size="1"
+# --update_cadence="2" --cluster_size="1" --effect_size_scale="smaller"
+
+# python3 src/run_rl_experiment.py --sim_env_type='NON_STAT_LOW_R' --alg_type='BLR_AC' \
+# --b_logistic="5.15" --clipping_vals='0.2_0.8' \
+# --update_cadence="14" --cluster_size="72" --effect_size_scale="small"

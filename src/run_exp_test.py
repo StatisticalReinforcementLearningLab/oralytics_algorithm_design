@@ -36,12 +36,14 @@ def main():
         print(USERS_LIST)
 
         ## HANDLING SIMULATION ENVIRONMENT ##
-        environment_module = simulation_environment.STAT_LOW_R(USERS_LIST)
-        # environment_module = STAT_MED_R(USERS_LIST)
-        # environment_module = STAT_HIGH_R(USERS_LIST)
-        # environment_module = NON_STAT_LOW_R(USERS_LIST)
-        # environment_module = NON_STAT_MED_R(USERS_LIST)
-        # environment_module = NON_STAT_HIGH_R(USERS_LIST)
+        # type String ["smaller", "small"]
+        effect_size_scale = "smaller"
+        environment_module = simulation_environment.STAT_LOW_R(USERS_LIST, effect_size_scale)
+        # environment_module = STAT_MED_R(USERS_LIST, effect_size_scale)
+        # environment_module = STAT_HIGH_R(USERS_LIST, effect_size_scale)
+        # environment_module = NON_STAT_LOW_R(USERS_LIST, effect_size_scale)
+        # environment_module = NON_STAT_MED_R(USERS_LIST, effect_size_scale)
+        # environment_module = NON_STAT_HIGH_R(USERS_LIST, effect_size_scale)
 
         ## RUN EXPERIMENT ##
         # No Pooling
