@@ -19,6 +19,10 @@ flags.DEFINE_string('b_logistic', None, 'input the slope for the smoothing funct
 flags.DEFINE_string('update_cadence', None, 'input the number of decision times before the next update')
 flags.DEFINE_string('cluster_size', None, 'input the cluster_size')
 flags.DEFINE_string('effect_size_scale', None, 'input the effect size scale')
+# hyperparameter tuning
+flags.DEFINE_string('tuning_hypers', None, 'input whether or not we are doing hyperparameter tuning')
+flags.DEFINE_string('algorithm_val_1', None, 'input the RL algorithm candidate value for var 1')
+flags.DEFINE_string('algorithm_val_2', None, 'input the RL algorithm candidate value for var 2')
 
 MAX_SEED_VAL = 100
 NUM_TRIAL_USERS = 72
@@ -70,22 +74,38 @@ def main(_argv):
     print("CLIPPING VALUES: [{}, {}]".format(L_min, L_max))
     smoothing_func_candidate = smoothing_function.genearlized_logistic_func_wrapper(L_min, L_max, b_logistic)
     update_cadence = int(FLAGS.update_cadence)
+    cost_params = [int(FLAGS.algorithm_val_1), int(FLAGS.algorithm_val_2)]
+    print("PROCESSED CANDIDATE VALS {}".format(cost_params))
     if FLAGS.alg_type == 'BLR_AC':
-        alg_candidate = rl_algorithm.BlrActionCentering([100, 100], update_cadence, smoothing_func_candidate)
+        alg_candidate = rl_algorithm.BlrActionCentering(cost_params, update_cadence, smoothing_func_candidate)
     elif FLAGS.alg_type == 'BLR_NO_AC':
-        alg_candidate = rl_algorithm.BlrNoActionCentering([100, 100], update_cadence, smoothing_func_candidate)
+        alg_candidate = rl_algorithm.BlrNoActionCentering(cost_params, update_cadence, smoothing_func_candidate)
     else:
         print("ERROR: NO ALG_TYPE FOUND - ", FLAGS.alg_type)
     print("ALG TYPE: {}".format(FLAGS.alg_type))
+
+    # check if we are hyperparameter tuning or evaluating algorithm candidates
+    if bool(FLAGS.tuning_hypers):
+        print("We are doing hyperparameter tuning!")
+        pickle_names = (FLAGS.sim_env_type, FLAGS.effect_size_scale, cost_params[0], cost_params[1])
+        data_pickle_template = 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
+        update_pickle_template = 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
+        estimating_eqns_pickle_template = 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_estimating_eqns_df.p'
+    else:
+        pickle_names = (FLAGS.sim_env_type, FLAGS.effect_size_scale, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size)
+        data_pickle_template = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
+        update_pickle_template = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
+        estimating_eqns_pickle_template = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_estimating_eqns_df.p'
 
     cluster_size = int(FLAGS.cluster_size)
     if cluster_size == 1:
         alg_candidates = [copy.deepcopy(alg_candidate) for _ in range(NUM_TRIAL_USERS)]
         for current_seed in range(MAX_SEED_VAL):
+
             _, environment_module = get_sim_env(current_seed)
             data_df, update_df = rl_experiments.run_experiment(alg_candidates, environment_module)
-            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
-            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
+            data_df_pickle_location = data_pickle_template.format(current_seed)
+            update_df_pickle_location = update_pickle_template.format(current_seed)
 
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)
@@ -96,9 +116,9 @@ def main(_argv):
             users_list, environment_module = get_sim_env(current_seed)
             user_groups = rl_experiments.pre_process_users(users_list)
             data_df, update_df, estimating_eqns_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
-            data_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_data_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
-            update_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_update_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
-            estimating_eqns_df_pickle_location = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_{}_estimating_eqns_df.p'.format(FLAGS.sim_env_type, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size, FLAGS.effect_size_scale, current_seed)
+            data_df_pickle_location = data_pickle_template.format(current_seed)
+            update_df_pickle_location = update_pickle_template.format(current_seed)
+            estimating_eqns_df_pickle_location = estimating_eqns_pickle_template.format(current_seed)
 
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)
