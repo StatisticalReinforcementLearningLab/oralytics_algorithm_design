@@ -4,6 +4,7 @@ import rl_experiments
 import rl_algorithm
 import simulation_environment
 import smoothing_function
+import read_write_info
 import pickle
 import numpy as np
 import pandas as pd
@@ -88,14 +89,14 @@ def main(_argv):
     if bool(FLAGS.tuning_hypers):
         print("We are doing hyperparameter tuning!")
         pickle_names = (FLAGS.sim_env_type, FLAGS.effect_size_scale, cost_params[0], cost_params[1])
-        data_pickle_template = 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
-        update_pickle_template = 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
-        estimating_eqns_pickle_template = 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_estimating_eqns_df.p'
+        data_pickle_template = read_write_info.WRITE_PATH_PREFIX + 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
+        update_pickle_template = read_write_info.WRITE_PATH_PREFIX + 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
+        estimating_eqns_pickle_template = read_write_info.WRITE_PATH_PREFIX + 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_estimating_eqns_df.p'
     else:
         pickle_names = (FLAGS.sim_env_type, FLAGS.effect_size_scale, FLAGS.alg_type, FLAGS.b_logistic, FLAGS.clipping_vals, FLAGS.update_cadence, FLAGS.cluster_size)
-        data_pickle_template = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
-        update_pickle_template = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
-        estimating_eqns_pickle_template = 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_estimating_eqns_df.p'
+        data_pickle_template = read_write_info.WRITE_PATH_PREFIX + 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
+        update_pickle_template = read_write_info.WRITE_PATH_PREFIX + 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
+        estimating_eqns_pickle_template = read_write_info.WRITE_PATH_PREFIX + 'pickle_results/{}_{}_{}_{}_{}_{}_{}_'.format(*pickle_names) + '{}_estimating_eqns_df.p'
 
     cluster_size = int(FLAGS.cluster_size)
     if cluster_size == 1:

@@ -8,6 +8,8 @@ from scipy.stats import bernoulli
 from scipy.stats import poisson
 from scipy.stats import norm
 
+import read_write_info
+
 class SimulationEnvironment():
     def __init__(self, users_list, process_env_state_func, user_envs):
         # List: users in the environment (can repeat)
@@ -26,8 +28,8 @@ class SimulationEnvironment():
     def get_users(self):
         return self.users_list
 
-ROBAS_3_STAT_PARAMS_DF = pd.read_csv('sim_env_data/stat_user_models.csv')
-ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('sim_env_data/non_stat_user_models.csv')
+ROBAS_3_STAT_PARAMS_DF = pd.read_csv(read_write_info.READ_PATH_PREFIX + 'sim_env_data/stat_user_models.csv')
+ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv(read_write_info.READ_PATH_PREFIX + 'sim_env_data/non_stat_user_models.csv')
 robas_3_data_df = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data_complete.csv")
 ROBAS_3_USERS = np.array(ROBAS_3_STAT_PARAMS_DF['User'])
 NUM_USERS = len(ROBAS_3_USERS)
