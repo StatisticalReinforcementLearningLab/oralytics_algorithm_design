@@ -15,3 +15,6 @@ We currently have a minimally viable product first pass. To run this experiment,
 
 ### Running Unit Tests
 To run tests, you need to be in the root folder and then run for example `python3 -m unittest test.test_rl_experiments` if you want to run the `test_rl_experiments.py` file in the test folder.
+
+### Hyperparameter Tuning
+To tune the hyperparameters of the reward, fill in the read and write path in `read_write_info.py` and run `sh run_hyper_tuning_jobs.sh` on the cluster.
