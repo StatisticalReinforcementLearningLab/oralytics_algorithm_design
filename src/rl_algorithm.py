@@ -207,7 +207,7 @@ class BayesianLinearRegression(RLAlgorithmExperimentCandidate):
         self.posterior_mean, self.posterior_var, self.PRIOR_MU, self.PRIOR_SIGMA, self.SIGMA_N_2)
 
 class BlrActionCentering(BayesianLinearRegression):
-    def __init__(self, cost_params, update_cadence, smoothing_func):
+    def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
         super(BlrActionCentering, self).__init__(cost_params, update_cadence, smoothing_func)
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
@@ -221,14 +221,14 @@ class BlrActionCentering(BayesianLinearRegression):
         self.posterior_mean = np.copy(self.PRIOR_MU)
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
 
-        self.SIGMA_N_2 = 3396.449
+        self.SIGMA_N_2 = noise_var
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
         # feature map
         self.feature_map = create_big_phi
 
 class BlrNoActionCentering(BayesianLinearRegression):
-    def __init__(self, cost_params, update_cadence, smoothing_func):
+    def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
         super(BlrNoActionCentering, self).__init__(cost_params, update_cadence, smoothing_func)
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
@@ -241,7 +241,7 @@ class BlrNoActionCentering(BayesianLinearRegression):
         self.posterior_mean = np.copy(self.PRIOR_MU)
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
 
-        self.SIGMA_N_2 = 3396.449
+        self.SIGMA_N_2 = noise_var
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
         # feature map

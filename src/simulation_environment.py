@@ -195,13 +195,13 @@ def construct_model_and_sample(user, state, action, \
 Effect size are imputed using the each environment's (stationary/non-stationary) fitted parameters
 """
 
-with open('sim_env_data/smaller_stat_user_effect_sizes.p', 'rb') as f:
+with open(read_write_info.READ_PATH_PREFIX + 'sim_env_data/smaller_stat_user_effect_sizes.p', 'rb') as f:
     SMALLER_STAT_USER_EFFECT_SIZES = pickle.load(f)
-with open('sim_env_data/smaller_non_stat_user_effect_sizes.p', 'rb') as f:
+with open(read_write_info.READ_PATH_PREFIX + 'sim_env_data/smaller_non_stat_user_effect_sizes.p', 'rb') as f:
     SMALLER_NON_STAT_USER_EFFECT_SIZES = pickle.load(f)
-with open('sim_env_data/less_small_stat_user_effect_sizes.p', 'rb') as f:
+with open(read_write_info.READ_PATH_PREFIX + 'sim_env_data/less_small_stat_user_effect_sizes.p', 'rb') as f:
     LESS_SMALL_STAT_USER_EFFECT_SIZES = pickle.load(f)
-with open('sim_env_data/less_small_non_stat_user_effect_sizes.p', 'rb') as f:
+with open(read_write_info.READ_PATH_PREFIX + 'sim_env_data/less_small_non_stat_user_effect_sizes.p', 'rb') as f:
     LESS_SMALL_NON_STAT_USER_EFFECT_SIZES = pickle.load(f)
 
 """
