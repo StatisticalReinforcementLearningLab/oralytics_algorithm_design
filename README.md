@@ -2,6 +2,9 @@
 
 This repository contains code for running simulations to make design decisions for the Oralytics RL algorithm. 
 
+### Fitting the Prior
+TBD
+
 ### Simulation Environment
 * Fitting parameters for the simualtion environment base model: [fitting_simulation_base_model.py](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/code/fitting_environment_models.py)
 * Selecting best environment model for each user: [environment_base_model_selection.py](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/code/environment_base_model_selection.py)
@@ -11,10 +14,13 @@ This repository contains code for running simulations to make design decisions f
 2. `python3 src/environment_base_model_selection.py` will take the csv files generated as described above in step 1 and will compute the RMSE of the model and the observed ROBAS 3 data and choose the base model class that yields a lower RMSE for that user. Outputs: [stat_user_models.csv](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/sim_env_data/stat_user_models.csv) and [non_stat_user_models.csv](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/sim_env_data/non_stat_user_models.csv)
 
 ### Running Experiments
-We currently have a minimally viable product first pass. To run this experiment, go to the root folder and run `python3 src/run_exp_test.py`.
+To run experiments:
+1. Fill in the read and write path in `read_write_info.py`. This specifies what path to read data from and what path to write results to. 
+2. In `run.py`, specify experiments parameters as instructed in the file. Example: specify the simulation environment variants and algorithm candidate properties.
+3. Run `python3 src/submit_batch` on the cluster to submit jobs and run in parallel.
 
 ### Running Unit Tests
 To run tests, you need to be in the root folder and then run for example `python3 -m unittest test.test_rl_experiments` if you want to run the `test_rl_experiments.py` file in the test folder.
 
 ### Hyperparameter Tuning
-To tune the hyperparameters of the reward, fill in the read and write path in `read_write_info.py` and run `sh run_hyper_tuning_jobs.sh` on the cluster.
+TBD
