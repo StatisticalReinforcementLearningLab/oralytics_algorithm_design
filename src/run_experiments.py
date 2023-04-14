@@ -1,8 +1,7 @@
 import rl_experiments
 import rl_algorithm
-import simulation_environment
+import sim_env_v1
 import smoothing_function
-import read_write_info
 import pickle
 import numpy as np
 import pandas as pd
@@ -10,8 +9,11 @@ import copy
 
 ### experiment parameters ###
 '''
-* 'sim_env_type': 'simulation environment type'
-* 'effect_size_scale': 'scales the imputed treatment effect size'
+### Simulation Env. Variants
+* 'base_env_type': 'simulation environment type, stationary (STAT) or non-stationary (NON_STAT)'
+* 'effect_size_scale': 'scales the imputed base treatment effect size'
+* 'delayed_effect_scale': 'shrinks the treatment effect size to simulate delayed effects of actions'
+### Algorithm Candidates
 * 'alg_type': 'RL algorithm candidate type'
 * 'noise_var': noise variance value
 * 'clipping_vals': 'asymptotes for the smoothing function'
@@ -26,41 +28,31 @@ import copy
 * 'algorithm_val_2': the RL algorithm candidate value for var 2
 '''
 
+# FILL IN SIMULATION VERSION
+SIM_ENV_VERSION = sim_env_v1
+SIM_ENV = sim_env_v1.SimulationEnvironmentV1
+
 MAX_SEED_VAL = 100
 NUM_TRIAL_USERS = 72
 
 def get_user_list(study_idxs):
-    user_list = [simulation_environment.USER_INDICES[idx] for idx in study_idxs]
+    user_list = [SIM_ENV_VERSION.USER_INDICES[idx] for idx in study_idxs]
 
     return user_list
 
-def get_sim_env(env_type, effect_size_scale, current_seed):
+def get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_seed):
     # draw different users per trial
     print("SEED: ", current_seed)
     np.random.seed(current_seed)
-    study_idxs = np.random.choice(simulation_environment.NUM_USERS, size=NUM_TRIAL_USERS)
+    study_idxs = np.random.choice(SIM_ENV_VERSION.NUM_USER_MODELS, size=NUM_TRIAL_USERS)
 
     # get user ids corresponding to index
     users_list = get_user_list(study_idxs)
     print(users_list)
-
     ## HANDLING SIMULATION ENVIRONMENT ##
-    if env_type == 'STAT_LOW_R':
-        environment_module = simulation_environment.STAT_LOW_R(users_list, effect_size_scale)
-    elif env_type == 'STAT_MED_R':
-        environment_module = simulation_environment.STAT_MED_R(users_list, effect_size_scale)
-    elif env_type == 'STAT_HIGH_R':
-        environment_module = simulation_environment.STAT_HIGH_R(users_list, effect_size_scale)
-    elif env_type == 'NON_STAT_LOW_R':
-        environment_module = simulation_environment.NON_STAT_LOW_R(users_list, effect_size_scale)
-    elif env_type == 'NON_STAT_MED_R':
-        environment_module = simulation_environment.NON_STAT_MED_R(users_list, effect_size_scale)
-    elif env_type == 'NON_STAT_HIGH_R':
-        environment_module = simulation_environment.NON_STAT_HIGH_R(users_list, effect_size_scale)
-    else:
-        print("ERROR: NO ENV_TYPE FOUND - ", env_type)
+    environment_module = SIM_ENV(users_list, base_env_type, effect_size_scale, delayed_effect_scale)
 
-    print("PROCESSED ENV_TYPE: {}, EFFECT SIZE SCALE: {}".format(env_type, effect_size_scale))
+    print("PROCESSED ENV_TYPE: {}, EFFECT SIZE SCALE: {}".format(base_env_type, effect_size_scale))
 
     return users_list, environment_module
 
@@ -94,14 +86,15 @@ def run_experiment(exp_kwargs, exp_path):
     data_pickle_template = exp_path + '/{}_data_df.p'
     update_pickle_template = exp_path + '/{}_update_df.p'
 
-    env_type = exp_kwargs["sim_env_type"]
+    base_env_type = exp_kwargs["base_env_type"]
     effect_size_scale = exp_kwargs["effect_size_scale"]
+    delayed_effect_scale = exp_kwargs["delayed_effect_scale"]
 
     if cluster_size == 1:
         alg_candidates = [copy.deepcopy(alg_candidate) for _ in range(NUM_TRIAL_USERS)]
         for current_seed in range(MAX_SEED_VAL):
 
-            _, environment_module = get_sim_env(env_type, effect_size_scale, current_seed)
+            _, environment_module = get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
             data_df, update_df = rl_experiments.run_experiment(alg_candidates, environment_module)
             data_df_pickle_location = data_pickle_template.format(current_seed)
             update_df_pickle_location = update_pickle_template.format(current_seed)
@@ -112,7 +105,7 @@ def run_experiment(exp_kwargs, exp_path):
 
     elif cluster_size == NUM_TRIAL_USERS:
         for current_seed in range(MAX_SEED_VAL):
-            users_list, environment_module = get_sim_env(env_type, effect_size_scale, current_seed)
+            users_list, environment_module = get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
             user_groups = rl_experiments.pre_process_users(users_list)
             data_df, update_df, _ = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
             data_df_pickle_location = data_pickle_template.format(current_seed)
@@ -121,6 +114,3 @@ def run_experiment(exp_kwargs, exp_path):
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)
             pd.to_pickle(update_df, update_df_pickle_location)
-
-if __name__ == '__main__':
-    app.run(main)
