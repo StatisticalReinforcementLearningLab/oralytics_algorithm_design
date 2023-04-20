@@ -1,6 +1,7 @@
 import rl_experiments
 import rl_algorithm
 import sim_env_v1
+import sim_env_v2
 import smoothing_function
 import pickle
 import numpy as np
@@ -29,8 +30,9 @@ import copy
 '''
 
 # FILL IN SIMULATION VERSION
-SIM_ENV_VERSION = sim_env_v1
-SIM_ENV = sim_env_v1.SimulationEnvironmentV1
+SIM_ENV_VERSION = sim_env_v2
+# SIM_ENV = sim_env_v1.SimulationEnvironmentV1
+SIM_ENV = sim_env_v2.SimulationEnvironmentV2
 
 MAX_SEED_VAL = 100
 NUM_TRIAL_USERS = 72
@@ -79,6 +81,8 @@ def run_experiment(exp_kwargs, exp_path):
         alg_candidate = rl_algorithm.BlrActionCentering(cost_params, update_cadence, smoothing_func_candidate, noise_var)
     elif exp_kwargs["alg_type"] == 'BLR_NO_AC':
         alg_candidate = rl_algorithm.BlrNoActionCentering(cost_params, update_cadence, smoothing_func_candidate, noise_var)
+    elif exp_kwargs["alg_type"] == 'BLR_AC_AE':
+        alg_candidate = rl_algorithm.BlrACWithAppEngagement(cost_params, update_cadence, smoothing_func_candidate, noise_var)
     else:
         print("ERROR: NO ALG_TYPE FOUND - ", exp_kwargs["alg_type"])
     print("ALG TYPE: {}".format(exp_kwargs["alg_type"]))

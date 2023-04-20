@@ -7,13 +7,23 @@ from scipy.stats import norm
 import read_write_info
 
 class SimulationEnvironment():
-    def __init__(self, users_list, process_env_state_func, user_envs):
+    def __init__(self, users_list, user_envs):
         # List: users in the environment (can repeat)
         self.users_list = users_list
-        # Func
-        self.process_env_state = process_env_state_func
         # Dict: key: int trial_user_idx, val: user environment object
         self.all_user_envs = user_envs
+
+    # this method needs to be implemented by all children
+    def generate_current_state(self):
+        return None
+
+    # this method needs to be implemented by all children
+    def get_env_history(self):
+        return None
+
+    # this method needs to be implemented by all children
+    def set_env_history(self):
+        return None
 
     def generate_rewards(self, user_idx, state, action):
         return self.all_user_envs[user_idx].generate_reward(state, action)
@@ -70,3 +80,87 @@ def construct_model_and_sample(user, state, action, \
 
   else:
     return 0
+
+class UserEnvironment():
+    def __init__(self, user_id, model_type, user_sessions, user_effect_sizes, \
+                delayed_effect_scale_val, user_params, user_effect_func_bern, user_effect_func_y):
+        self.user_id = user_id
+        self.model_type = model_type
+        # vector: size (T, D) where D = 6 is the dimension of the env. state
+        # T is the length of the study
+        self.user_states = user_sessions
+        # tuple: float values of effect size on bernoulli, poisson components
+        self.og_user_effect_sizes = user_effect_sizes
+        self.user_effect_sizes = np.copy(self.og_user_effect_sizes)
+        # float: unresponsive scaling value
+        self.delayed_effect_scale_val = delayed_effect_scale_val
+        # probability of becoming unresponsive
+        ### SETTING TO 1 FOR NOW!
+        self.unresponsive_prob = 1.0
+        # you can only shrink at most once a week
+        self.times_shrunk = 0
+        # reward generating function
+        self.user_params = user_params
+        self.user_effect_func_bern = user_effect_func_bern
+        self.user_effect_func_y = user_effect_func_y
+        self.reward_generating_func = lambda state, action: construct_model_and_sample(user_id, state, action, \
+                                          self.user_params[0], \
+                                          self.user_params[1], \
+                                          self.user_params[2], \
+                                          self.model_type, \
+                                          effect_func_bern=lambda state: self.user_effect_func_bern(state, self.user_effect_sizes[0]), \
+                                          effect_func_y=lambda state: self.user_effect_func_y(state, self.user_effect_sizes[1]))
+        # user environment history
+        self.user_history = {"actions":[], "outcomes":[]}
+
+    def get_user_history(self, property):
+        return self.user_history[property]
+
+    def set_user_history(self, property, value):
+        self.user_history[property].append(value)
+
+    def generate_reward(self, state, action):
+        # save action and outcome
+        self.set_user_history("actions", action)
+        reward = min(self.reward_generating_func(state, action), 180)
+        self.set_user_history("outcomes", reward)
+
+        return reward
+
+    def update_responsiveness(self, a1_cond, a2_cond, b_cond, j):
+        # it's been atleast a week since we last shrunk
+        if j % 14 == 0:
+            if (b_cond and a1_cond) or a2_cond:
+                # draw
+                is_unresponsive = bernoulli.rvs(self.unresponsive_prob)
+                if is_unresponsive:
+                    self.user_effect_sizes = self.user_effect_sizes * self.delayed_effect_scale_val
+                    self.times_shrunk += 1
+
+            elif self.times_shrunk > 0:
+                if self.delayed_effect_scale_val == 0:
+                    self.user_effect_sizes[0] = self.og_user_effect_sizes[0]
+                    self.user_effect_sizes[1] = self.og_user_effect_sizes[1]
+                else:
+                    self.user_effect_sizes = self.user_effect_sizes / self.delayed_effect_scale_val
+                self.times_shrunk -= 1
+
+    def get_states(self):
+        return self.user_states
+
+    def get_user_effect_sizes(self):
+        return self.user_effect_sizes
+
+"""## SIMULATING DELAYED EFFECTS COMPONENT
+---
+"""
+
+def get_delayed_effect_scale(delayed_effect_scale):
+    if delayed_effect_scale == 'LOW_R':
+        return 0
+    elif delayed_effect_scale == 'MED_R':
+        return 0.5
+    elif delayed_effect_scale == 'HIGH_R':
+        return 0.8
+    else:
+        print("ERROR: NO DELAYED EFFECT SCALE FOUND - ", delayed_effect_scale)

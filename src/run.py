@@ -27,7 +27,7 @@ OUTPUT_DIR = read_write_info.WRITE_PATH_PREFIX
 BASE_ENV_TYPE = ["STAT", "NON_STAT"]
 EFFECT_SIZE_SCALES = ["small", "smaller"]
 DELAYED_EFFECT_SCALES = ["LOW_R", "MED_R", "HIGH_R"]
-ALG_TYPES = ["BLR_AC"]
+ALG_TYPES = ["BLR_AC"] # "BLR_AC_AE"
 # Note: 3396.449 is the noise variance from ROBAS 2 data
 # 3412.422 is the noise variance from ROBAS 3 data
 NOISE_VARS = [3396.449, 3412.422]

@@ -1,4 +1,3 @@
-import simulation_environment
 import rl_algorithm
 import numpy as np
 import pandas as pd
@@ -134,23 +133,29 @@ def compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
         estimating_eqn = alg_candidate.compute_estimating_equation([big_phi, big_r], n)
         set_estimating_eqns_df_values(estimating_eqns_df, update_t, user_idx, estimating_eqn)
 
-def execute_decision_time(data_df, user_idx, user_states, j, alg_candidate, sim_env, policy_idx):
-    user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j,  'quality').flatten()
-    user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j,  'action').flatten()
-    env_state = sim_env.process_env_state(user_states[j], j, user_qualities)
-    # if first week for user, we impute A bar and B bar
+# user_qualities and user_actions should be numpy arrays of the same size
+def get_b_bar_a_bar(data_df, user_idx, j):
+    user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j, 'quality').flatten()
+    user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j, 'action').flatten()
+    j = len(user_actions)
     if j < 14:
-        b_bar = np.mean(user_qualities) if j > 1 else 0
-        a_bar = np.mean(user_actions) if j > 1 else 0
+        a_bar = 0 if len(user_actions) == 0 else np.mean(user_actions)
+        b_bar = 0 if len(user_qualities) == 0 else np.mean(user_qualities)
     else:
-        b_bar = rl_algorithm.calculate_b_bar(user_qualities[-14:])
         a_bar = rl_algorithm.calculate_a_bar(user_actions[-14:])
+        b_bar = rl_algorithm.calculate_b_bar(user_qualities[-14:])
+
+    return b_bar, a_bar
+
+def execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, policy_idx):
+    env_state = sim_env.generate_current_state(user_idx, j)
+    b_bar, a_bar = get_b_bar_a_bar(data_df, user_idx, j)
     advantage_state, baseline_state = alg_candidate.process_alg_state_func(env_state, b_bar, a_bar)
     ## ACTION SELECTION ##
     action, action_prob = alg_candidate.action_selection(advantage_state)
     ## REWARD GENERATION ##
     # quality definition
-    quality = min(sim_env.generate_rewards(user_idx, env_state, action), 180)
+    quality = sim_env.generate_rewards(user_idx, env_state, action)
     reward = alg_candidate.reward_def_func(quality, action, b_bar, a_bar)
     ## SAVE VALUES ##
     set_data_df_values_for_user(data_df, user_idx, j, policy_idx, action, action_prob, reward, quality, baseline_state)
@@ -174,8 +179,7 @@ def run_experiment(alg_candidates, sim_env):
         print("Decision Time: ", j)
         for user_idx in range(len(env_users)):
             alg_candidate = alg_candidates[user_idx]
-            user_states = sim_env.get_states_for_user(user_idx)
-            execute_decision_time(data_df, user_idx, user_states, j, alg_candidate, sim_env, policy_idxs[user_idx])
+            execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, policy_idxs[user_idx])
             if (j % update_cadence == (update_cadence - 1) and j > 0):
                 day_in_study = 1 + (j // 2)
                 alg_states = get_data_df_values_for_users(data_df, [user_idx], day_in_study, 'state.*')
@@ -218,11 +222,9 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
         for update_idx_within_week in range(num_updates_within_week):
             for user_tuple in current_groups:
                 user_idx, user_entry_date = int(user_tuple[0]), int(user_tuple[1])
-                user_states = sim_env.get_states_for_user(user_idx)
                 for decision_idx in range(update_cadence):
                     j = (week - 1 - user_entry_date) * 14 + (update_idx_within_week * update_cadence) + decision_idx
-                    user_states = sim_env.get_states_for_user(user_idx)
-                    execute_decision_time(data_df, user_idx, user_states, j, alg_candidate, sim_env, update_idx)
+                    execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, update_idx)
             ### UPDATE TIME ###
             day_in_study = 1 + (week - 1) * 7 + (update_idx_within_week + decision_idx // 2)
             current_user_idxs = current_groups[:,0].astype(int)

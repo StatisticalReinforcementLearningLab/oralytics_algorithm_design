@@ -83,6 +83,9 @@ def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
 
   return brushing_quality - C
 
+"""
+Algorithm State Space (For V1)
+"""
 ## baseline: ##
 # 0 - time of day
 # 1 - b bar
@@ -166,7 +169,6 @@ def get_beta_posterior_draws(posterior_mean, posterior_var):
 
   return np.random.multivariate_normal(beta_post_mean, beta_post_var, NUM_POSTERIOR_SAMPLES)
 
-
 ## ACTION SELECTION ##
 # we calculate the posterior probability of P(R_1 > R_0) clipped
 # we make a Bernoulli draw with prob. P(R_1 > R_0) of the action
@@ -226,6 +228,25 @@ class BlrActionCentering(BayesianLinearRegression):
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
         # feature map
         self.feature_map = create_big_phi
+
+class BlrACWithAppEngagement(BlrActionCentering):
+    def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
+        super(BlrACWithAppEngagement, self).__init__(cost_params, update_cadence, smoothing_func)
+
+        # THESE VALUES WERE SET WITH ROBAS 2 DATA
+        # size of mu vector = D_baseline=5 + D_advantage=5 + D_advantage=5
+        self.feature_dim = 5 + 5 + 5
+        self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        sigma_beta = 29.624
+        self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, SIGMA_BETA**2, SIGMA_BETA**2, 46.240**2, \
+                                    SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2,\
+                                    SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2]))
+        self.posterior_mean = np.copy(self.PRIOR_MU)
+        self.posterior_var = np.copy(self.PRIOR_SIGMA)
+
+        self.SIGMA_N_2 = noise_var
+        # initial draws are from the prior
+        self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
 
 class BlrNoActionCentering(BayesianLinearRegression):
     def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
