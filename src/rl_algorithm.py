@@ -11,15 +11,23 @@ import numpy as np
 from scipy.stats import bernoulli
 
 class RLAlgorithm():
-    def __init__(self, update_cadence, smoothing_func, process_alg_state_func):
+    def __init__(self, cost_params, update_cadence, smoothing_func):
         # how often the RL algorithm updates parameters
         self.update_cadence = update_cadence
         # smoothing function for after-study analysis
         self.smoothing_func = smoothing_func
-        # function that takes in a raw state and processes the current state for the algorithm
-        self.process_alg_state_func = process_alg_state_func
         # feature space dimension
         self.feature_dim = 0
+        # xi_1, xi_2 params for the cost term parameterizes the reward def. func.
+        self.reward_def_func = lambda brushing_quality, current_action, b_bar, a_bar: \
+                      reward_definition(brushing_quality, \
+                                        cost_params[0], cost_params[1], \
+                                        current_action, b_bar, a_bar)
+
+    # need to implement
+    # function that takes in a raw state and processes the current state for the algorithm
+    def process_alg_state(self, env_state, b_bar, a_bar):
+        return 0
 
     def action_selection(self, advantage_state, baseline_state):
         return 0
@@ -96,32 +104,34 @@ Algorithm State Space (For V1)
 # 1 - b bar
 # 2 - a bar
 # 3 - bias
-
-def process_alg_state(env_state, b_bar, a_bar):
+def process_alg_state_v1(env_state, b_bar, a_bar):
     baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
                                a_bar, 1])
     advantage_state = np.copy(baseline_state)
 
     return advantage_state, baseline_state
 
-class RLAlgorithmExperimentCandidate(RLAlgorithm):
-    def __init__(self, cost_params, update_cadence, smoothing_func):
-        # process_alg_state is a global function
-        super(RLAlgorithmExperimentCandidate, self).__init__(update_cadence, smoothing_func, process_alg_state)
-        # xi_1, xi_2 params for the cost term parameterizes the reward def. func.
-        self.reward_def_func = lambda brushing_quality, current_action, b_bar, a_bar: \
-                      reward_definition(brushing_quality, \
-                                        cost_params[0], cost_params[1], \
-                                        current_action, b_bar, a_bar)
+"""
+Algorithm State Space (For V2)
+"""
+## baseline: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - app engagement
+# 4 - bias
+## advantage: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - app engagement
+# 4 - bias
+def process_alg_state_v2(env_state, b_bar, a_bar):
+    baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
+                               a_bar, env_state[4], 1])
+    advantage_state = np.copy(baseline_state)
 
-    def action_selection(self, advantage_state, baseline_state):
-        return 0
-
-    def update(self, advantage_states, baseline_states, actions, pis, rewards):
-        return 0
-
-    def get_update_cadence(self):
-        return self.update_cadence
+    return advantage_state, baseline_state
 
 """### Bayesian Linear Regression Thompson Sampler
 ---
@@ -181,7 +191,7 @@ def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_fu
 """### BLR Algorithm Object
 ---
 """
-class BayesianLinearRegression(RLAlgorithmExperimentCandidate):
+class BayesianLinearRegression(RLAlgorithm):
     def __init__(self, cost_params, update_cadence, smoothing_func):
         super(BayesianLinearRegression, self).__init__(cost_params, update_cadence, smoothing_func)
 
@@ -229,6 +239,9 @@ class BlrActionCentering(BayesianLinearRegression):
         # feature map
         self.feature_map = create_big_phi
 
+    def process_alg_state(self, env_state, b_bar, a_bar):
+        return process_alg_state_v1(env_state, b_bar, a_bar)
+
 class BlrACWithAppEngagement(BlrActionCentering):
     def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
         super(BlrACWithAppEngagement, self).__init__(cost_params, update_cadence, smoothing_func)
@@ -247,6 +260,9 @@ class BlrACWithAppEngagement(BlrActionCentering):
         self.SIGMA_N_2 = noise_var
         # initial draws are from the prior
         self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
+
+    def process_alg_state(self, env_state, b_bar, a_bar):
+        return process_alg_state_v2(env_state, b_bar, a_bar)
 
 class BlrNoActionCentering(BayesianLinearRegression):
     def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
@@ -268,3 +284,6 @@ class BlrNoActionCentering(BayesianLinearRegression):
         # feature map
         self.feature_map = lambda adv_states, base_states, probs, actions: \
         create_big_phi_no_action_centering(adv_states, base_states, actions)
+
+    def process_alg_state(self, env_state, b_bar, a_bar):
+        return process_alg_state_v1(env_state, b_bar, a_bar)
