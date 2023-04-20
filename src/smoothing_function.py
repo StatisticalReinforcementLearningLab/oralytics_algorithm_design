@@ -24,6 +24,5 @@ def genearlized_logistic_func(x, l_min, l_max, B):
     return l_min + (num / denom)
 
 def genearlized_logistic_func_wrapper(l_min, l_max, B):
-    smoothing_func = lambda x: genearlized_logistic_func(x, l_min, l_max, B)
 
-    return lambda x: np.apply_along_axis(smoothing_func, 0, x)
+    return lambda x: genearlized_logistic_func(x, l_min, l_max, B)

@@ -8,7 +8,7 @@ import stat_computations
 
 import pandas as pd
 import numpy as np
-from scipy.stats import bernoulli
+import scipy.stats as stats
 
 class RLAlgorithm():
     def __init__(self, cost_params, update_cadence, smoothing_func):
@@ -35,6 +35,9 @@ class RLAlgorithm():
     def update(self, alg_states, actions, pis, rewards):
         return 0
 
+    def get_feature_dim(self):
+        return self.feature_dim
+
     def get_update_cadence(self):
         return self.update_cadence
 
@@ -42,8 +45,6 @@ class RLAlgorithm():
 D_advantage = 4
 # Baseline Time Feature Dimensions
 D_baseline = 4
-# Number of Posterior Draws
-NUM_POSTERIOR_SAMPLES = 5000
 
 ### Reward Definition ###
 GAMMA = 13/14
@@ -171,22 +172,16 @@ def update_posterior_w(Phi, R, sigma_n_squared, prior_mu, prior_sigma):
 
   return mean, var
 
-def get_beta_posterior_draws(posterior_mean, posterior_var):
-  # grab last D_advantage of mean vector
-  beta_post_mean = posterior_mean[-D_advantage:]
-  # grab right bottom corner D_advantage x D_advantage submatrix
-  beta_post_var = posterior_var[-D_advantage:,-D_advantage:]
-
-  return np.random.multivariate_normal(beta_post_mean, beta_post_var, NUM_POSTERIOR_SAMPLES)
-
 ## ACTION SELECTION ##
 # we calculate the posterior probability of P(R_1 > R_0) clipped
 # we make a Bernoulli draw with prob. P(R_1 > R_0) of the action
-def bayes_lr_action_selector(beta_posterior_draws, advantage_state, smoothing_func):
-  # Note: the smoothing function inherently clips between L_min and L_max
-  smooth_posterior_prob = np.mean(smoothing_func(beta_posterior_draws @ advantage_state))
+def bayes_lr_action_selector(beta_post_mean, beta_post_var, advantage_state, smoothing_func):
+  # using the genearlized_logistic_func, probabilities are already clipped to asymptotes
+  mu = advantage_state @ beta_post_mean
+  std = np.sqrt(advantage_state @ beta_post_var @ advantage_state.T)
+  posterior_prob = stats.norm.expect(func=smoothing_func, loc=mu, scale=std)
 
-  return bernoulli.rvs(smooth_posterior_prob), smooth_posterior_prob
+  return stats.bernoulli.rvs(posterior_prob), posterior_prob
 
 """### BLR Algorithm Object
 ---
@@ -196,23 +191,26 @@ class BayesianLinearRegression(RLAlgorithm):
         super(BayesianLinearRegression, self).__init__(cost_params, update_cadence, smoothing_func)
 
         # need to be set by children classes
+        self.D_ADVANTAGE = None
+        self.D_BASELINE = None
         self.PRIOR_MU = None
         self.PRIOR_SIGMA = None
         self.SIGMA_N_2 = None
         self.feature_map = None
         self.posterior_mean = None
         self.posterior_var = None
-        self.beta_posterior_draws = None
 
     def action_selection(self, advantage_state):
-        return bayes_lr_action_selector(self.beta_posterior_draws, advantage_state, self.smoothing_func)
+        return bayes_lr_action_selector(self.posterior_mean[-self.D_ADVANTAGE:], \
+                                                self.posterior_var[-self.D_ADVANTAGE:,-self.D_ADVANTAGE:], \
+                                                advantage_state, \
+                                                self.smoothing_func)
 
     def update(self, alg_states, actions, pis, rewards):
         Phi = self.feature_map(alg_states, alg_states, actions, pis)
         posterior_mean, posterior_var = update_posterior_w(Phi, rewards, self.SIGMA_N_2, self.PRIOR_MU, self.PRIOR_SIGMA)
         self.posterior_mean = posterior_mean
         self.posterior_var = posterior_var
-        self.beta_posterior_draws = get_beta_posterior_draws(posterior_mean, posterior_var)
 
     def compute_estimating_equation(self, user_history, n):
         return stat_computations.compute_estimating_equation(user_history, n, \
@@ -224,7 +222,9 @@ class BlrActionCentering(BayesianLinearRegression):
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage + D_advantage
-        self.feature_dim = D_baseline + D_advantage + D_advantage
+        self.D_ADVANTAGE = 4
+        self.D_BASELINE = 4
+        self.feature_dim = self.D_BASELINE + self.D_ADVANTAGE + self.D_ADVANTAGE
         self.PRIOR_MU = np.array([0, 4.925, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0])
         sigma_beta = 29.624
         self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 46.240**2, \
@@ -234,8 +234,6 @@ class BlrActionCentering(BayesianLinearRegression):
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
 
         self.SIGMA_N_2 = noise_var
-        # initial draws are from the prior
-        self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
         # feature map
         self.feature_map = create_big_phi
 
@@ -248,7 +246,9 @@ class BlrACWithAppEngagement(BlrActionCentering):
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline=5 + D_advantage=5 + D_advantage=5
-        self.feature_dim = 5 + 5 + 5
+        self.D_ADVANTAGE = 5
+        self.D_BASELINE = 5
+        self.feature_dim = self.D_BASELINE + self.D_ADVANTAGE + self.D_ADVANTAGE
         self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         sigma_beta = 29.624
         self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, SIGMA_BETA**2, SIGMA_BETA**2, 46.240**2, \
@@ -258,8 +258,6 @@ class BlrACWithAppEngagement(BlrActionCentering):
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
 
         self.SIGMA_N_2 = noise_var
-        # initial draws are from the prior
-        self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
 
     def process_alg_state(self, env_state, b_bar, a_bar):
         return process_alg_state_v2(env_state, b_bar, a_bar)
@@ -270,7 +268,9 @@ class BlrNoActionCentering(BayesianLinearRegression):
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline + D_advantage
-        self.feature_dim = D_baseline + D_advantage
+        self.D_ADVANTAGE = 4
+        self.D_BASELINE = 4
+        self.feature_dim = self.D_BASELINE + self.D_ADVANTAGE
         self.PRIOR_MU = np.array([0, 4.925, 0, 82.209, 0, 0, 0, 0])
         sigma_beta = 29.624
         self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, sigma_beta**2, 46.240**2, \
@@ -279,8 +279,6 @@ class BlrNoActionCentering(BayesianLinearRegression):
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
 
         self.SIGMA_N_2 = noise_var
-        # initial draws are from the prior
-        self.beta_posterior_draws = get_beta_posterior_draws(self.PRIOR_MU, self.PRIOR_SIGMA)
         # feature map
         self.feature_map = lambda adv_states, base_states, probs, actions: \
         create_big_phi_no_action_centering(adv_states, base_states, actions)

@@ -150,7 +150,7 @@ def get_b_bar_a_bar(data_df, user_idx, j):
 def execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, policy_idx):
     env_state = sim_env.generate_current_state(user_idx, j)
     b_bar, a_bar = get_b_bar_a_bar(data_df, user_idx, j)
-    advantage_state, baseline_state = alg_candidate.process_alg_state_func(env_state, b_bar, a_bar)
+    advantage_state, baseline_state = alg_candidate.process_alg_state(env_state, b_bar, a_bar)
     ## ACTION SELECTION ##
     action, action_prob = alg_candidate.action_selection(advantage_state)
     ## REWARD GENERATION ##
@@ -169,7 +169,7 @@ def run_experiment(alg_candidates, sim_env):
     env_users = sim_env.get_users()
     # all alg_candidates have the same update cadence and feature dimension
     update_cadence = alg_candidates[0].get_update_cadence()
-    data_df, update_df = create_dfs_no_pooling(env_users, update_cadence, alg_candidates[0].feature_dim)
+    data_df, update_df = create_dfs_no_pooling(env_users, update_cadence, alg_candidates[0].get_feature_dim())
     policy_idxs = np.zeros(len(env_users))
     # add in prior values to posterior dataframe
     for user_idx in range(len(env_users)):
@@ -209,7 +209,7 @@ def pre_process_users(total_trial_users):
 def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
     env_users = sim_env.get_users()
     update_cadence = alg_candidate.get_update_cadence()
-    data_df, update_df, estimating_eqns_df = create_dfs_full_pooling(user_groups, update_cadence, alg_candidate.feature_dim)
+    data_df, update_df, estimating_eqns_df = create_dfs_full_pooling(user_groups, update_cadence, alg_candidate.get_feature_dim())
     # add in prior values to posterior dataframe
     set_update_df_values(update_df, 0, alg_candidate.posterior_mean, alg_candidate.posterior_var)
     current_groups = user_groups[:RECRUITMENT_RATE]
