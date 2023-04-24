@@ -41,11 +41,6 @@ class RLAlgorithm():
     def get_update_cadence(self):
         return self.update_cadence
 
-# Advantage Time Feature Dimensions
-D_advantage = 4
-# Baseline Time Feature Dimensions
-D_baseline = 4
-
 ### Reward Definition ###
 GAMMA = 13/14
 B = 111
