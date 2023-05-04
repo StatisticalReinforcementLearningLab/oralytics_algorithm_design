@@ -179,6 +179,7 @@ sds = np.std(ws, axis=0)
 print("diag of Sigma_{alpha_0}: ", [sds[0] / 2, sds[1], sds[2] / 2, sds[3]])
 
 mus = np.mean(ws, axis=0)
+print("WEIGHT MEANS!", mus)
 ### mu_{\alpha_0} ###
 print("mu_{alpha}: ",[0, mus[1], 0, mus[3]])
 
