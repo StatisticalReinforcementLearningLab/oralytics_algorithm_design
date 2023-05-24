@@ -163,7 +163,7 @@ class UserEnvironmentV2(simulation_environment.UserEnvironment):
         super(UserEnvironmentV2, self).__init__(user_id, model_type, None, user_effect_sizes, \
                   delayed_effect_scale_val, user_params, user_effect_func_bern, user_effect_func_y)
         # probability of opening app
-        self.app_open_base_prob = 3/7
+        self.app_open_base_prob = 0.7
 
     def generate_app_engagement(self):
         return bernoulli.rvs(self.app_open_base_prob)

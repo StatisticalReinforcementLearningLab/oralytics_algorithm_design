@@ -3,8 +3,8 @@
 RL Algorithm that uses a contextual bandit framework with Thompson sampling, full-pooling, and
 a Bayesian Linear Regression reward approximating function.
 """
-# from src import stat_computations
 import stat_computations
+import reward_definition
 
 import pandas as pd
 import numpy as np
@@ -20,7 +20,7 @@ class RLAlgorithm():
         self.feature_dim = 0
         # xi_1, xi_2 params for the cost term parameterizes the reward def. func.
         self.reward_def_func = lambda brushing_quality, current_action, b_bar, a_bar: \
-                      reward_definition(brushing_quality, \
+                      reward_definition.calculate_reward(brushing_quality, \
                                         cost_params[0], cost_params[1], \
                                         current_action, b_bar, a_bar)
 
@@ -41,52 +41,6 @@ class RLAlgorithm():
     def get_update_cadence(self):
         return self.update_cadence
 
-### Reward Definition ###
-GAMMA = 13/14
-B = 111
-A_1 = 0.5
-A_2 = 0.8
-DISCOUNTED_GAMMA_ARRAY = GAMMA ** np.flip(np.arange(14))
-CONSTANT = (1 - GAMMA) / (1 - GAMMA**14)
-
-# b bar is designed to be in [0, 180]
-def normalize_b_bar(b_bar):
-  return (b_bar - (181 / 2)) / (179 / 2)
-
-# brushing duration is of length 14 where the first element is the brushing duration
-# at time t - 14 and the last element the brushing duration at time t - 1
-def calculate_b_bar(brushing_durations):
-  sum_term = DISCOUNTED_GAMMA_ARRAY * brushing_durations
-
-  return CONSTANT * np.sum(sum_term)
-
-def calculate_a_bar(past_actions):
-  sum_term = DISCOUNTED_GAMMA_ARRAY * past_actions
-
-  return CONSTANT * np.sum(sum_term)
-
-def calculate_b_condition(b_bar):
-  return b_bar > B
-
-def calculate_a1_condition(a_bar):
-  return a_bar > A_1
-
-def calculate_a2_condition(a_bar):
-  return a_bar > A_2
-
-def cost_definition(xi_1, xi_2, action, B_condition, A1_condition, A2_condition):
-  return action * (xi_1 * B_condition * A1_condition + xi_2 * A2_condition)
-
-# returns the reward where the cost term is parameterized by xi_1, xi_2
-def reward_definition(brushing_quality, xi_1, xi_2, current_action,\
-                      b_bar, a_bar):
-  B_condition = calculate_b_condition(b_bar)
-  A1_condition = calculate_a1_condition(a_bar)
-  A2_condition = calculate_a2_condition(a_bar)
-  C = cost_definition(xi_1, xi_2, current_action, B_condition, A1_condition, A2_condition)
-
-  return brushing_quality - C
-
 """
 Algorithm State Space (For V1)
 """
@@ -101,14 +55,14 @@ Algorithm State Space (For V1)
 # 2 - a bar
 # 3 - bias
 def process_alg_state_v1(env_state, b_bar, a_bar):
-    baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
+    baseline_state = np.array([env_state[0], reward_definition.normalize_b_bar(b_bar), \
                                a_bar, 1])
     advantage_state = np.copy(baseline_state)
 
     return advantage_state, baseline_state
 
 """
-Algorithm State Space (For V2)
+Algorithm State Space (For V2 and V3)
 """
 ## baseline: ##
 # 0 - time of day
@@ -123,8 +77,8 @@ Algorithm State Space (For V2)
 # 3 - app engagement
 # 4 - bias
 def process_alg_state_v2(env_state, b_bar, a_bar):
-    baseline_state = np.array([env_state[0], normalize_b_bar(b_bar), \
-                               a_bar, env_state[4], 1])
+    baseline_state = np.array([env_state[0], reward_definition.normalize_b_bar(b_bar), \
+                               reward_definition.normalize_a_bar(a_bar), env_state[4], 1])
     advantage_state = np.copy(baseline_state)
 
     return advantage_state, baseline_state

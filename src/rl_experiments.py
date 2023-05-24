@@ -1,6 +1,7 @@
 import rl_algorithm
 import numpy as np
 import pandas as pd
+import reward_definition
 
 ## GLOBAL VALUES ##
 ### CHANGE BACK TO  `RECRUITMENT_RATE = 72` TO NOT DO INCREMENTAL RECRUITMENT ###
@@ -133,23 +134,11 @@ def compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
         estimating_eqn = alg_candidate.compute_estimating_equation([big_phi, big_r], n)
         set_estimating_eqns_df_values(estimating_eqns_df, update_t, user_idx, estimating_eqn)
 
-# user_qualities and user_actions should be numpy arrays of the same size
-def get_b_bar_a_bar(data_df, user_idx, j):
-    user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j, 'quality').flatten()
-    user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j, 'action').flatten()
-    j = len(user_actions)
-    if j < 14:
-        a_bar = 0 if len(user_actions) == 0 else np.mean(user_actions)
-        b_bar = 0 if len(user_qualities) == 0 else np.mean(user_qualities)
-    else:
-        a_bar = rl_algorithm.calculate_a_bar(user_actions[-14:])
-        b_bar = rl_algorithm.calculate_b_bar(user_qualities[-14:])
-
-    return b_bar, a_bar
-
 def execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, policy_idx):
     env_state = sim_env.generate_current_state(user_idx, j)
-    b_bar, a_bar = get_b_bar_a_bar(data_df, user_idx, j)
+    user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j, 'quality').flatten()
+    user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j, 'action').flatten()
+    b_bar, a_bar = reward_definition.get_b_bar_a_bar(user_qualities, user_actions)
     advantage_state, baseline_state = alg_candidate.process_alg_state(env_state, b_bar, a_bar)
     ## ACTION SELECTION ##
     action, action_prob = alg_candidate.action_selection(advantage_state)
@@ -162,8 +151,8 @@ def execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, policy_i
     ## UPDATE UNRESPONSIVENESS ##
     # if it's after the first week
     if j >= 14:
-        sim_env.update_responsiveness(user_idx, rl_algorithm.calculate_a1_condition(a_bar),\
-         rl_algorithm.calculate_a2_condition(a_bar), rl_algorithm.calculate_b_condition(b_bar), j)
+        sim_env.update_responsiveness(user_idx, reward_definition.calculate_a1_condition(a_bar),\
+         reward_definition.calculate_a2_condition(a_bar), reward_definition.calculate_b_condition(b_bar), j)
 
 def run_experiment(alg_candidates, sim_env):
     env_users = sim_env.get_users()

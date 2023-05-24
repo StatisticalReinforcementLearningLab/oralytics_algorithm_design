@@ -74,7 +74,7 @@ import pickle
 
 # get all robas 3 users
 ROBAS_3_DATA = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data_complete.csv")
-ROBAS_3_USERS = ROBAS_3_USERS = np.unique(ROBAS_3_DATA['robas id'])
+ROBAS_3_USERS = np.unique(ROBAS_3_DATA['robas id'])
 
 # total brushing quality
 robas_3_user_total_brush_quality = (np.array(ROBAS_3_DATA['brushingDuration'])[::2] - np.array(ROBAS_3_DATA['pressureDuration'])[::2])\

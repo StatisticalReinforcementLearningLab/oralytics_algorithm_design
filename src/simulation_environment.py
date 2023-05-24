@@ -86,7 +86,7 @@ class UserEnvironment():
                 delayed_effect_scale_val, user_params, user_effect_func_bern, user_effect_func_y):
         self.user_id = user_id
         self.model_type = model_type
-        # vector: size (T, D) where D = 6 is the dimension of the env. state
+        # vector: size (T, D) where D is the dimension of the env. state
         # T is the length of the study
         self.user_states = user_sessions
         # tuple: float values of effect size on bernoulli, poisson components
