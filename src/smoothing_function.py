@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.special import expit
+
 """### Smoothing Functions
 ---
 """
@@ -17,12 +19,14 @@ C_logistic = 3
 K_logistic = 1
 
 # l_min, l_max are lower and upper asymptotes
-def genearlized_logistic_func(x, l_min, l_max, B):
-    num = l_max - l_min
-    denom = (1 + C_logistic * np.exp(-B * x))**K_logistic
+# uses scipy.special.expit for numerical stability
+def stable_generalized_logistic(x, L_min, L_max, B_logistic):
+    num = L_max - L_min
+    stable_exp = expit(B_logistic * x - np.log(C_logistic))
+    stable_exp_k = stable_exp**K_logistic
 
-    return l_min + (num / denom)
+    return L_min + num * stable_exp_k
 
 def genearlized_logistic_func_wrapper(l_min, l_max, B):
 
-    return lambda x: genearlized_logistic_func(x, l_min, l_max, B)
+    return lambda x: stable_generalized_logistic(x, l_min, l_max, B)
