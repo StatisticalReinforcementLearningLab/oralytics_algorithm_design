@@ -22,8 +22,13 @@ def compute_num_updates(users_groups, update_cadence):
 
     return int(num_updates)
 
-FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality', 'state.tod', 'state.b.bar',\
- 'state.a.bar', 'state.bias']
+## ANNA TODO: need to think of a more generalizable way to input this
+# for now: if running sim env V1, change it back ##
+# FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality', 'state.tod', 'state.b.bar',\
+#  'state.a.bar', 'state.bias']
+
+FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality'] + ['state.tod', 'state.b.bar',\
+ 'state.a.bar', 'state.app.engage', 'state.bias']
 
 def create_dfs_no_pooling(users, update_cadence, rl_algorithm_feature_dim):
     N = len(users)

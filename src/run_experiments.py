@@ -84,8 +84,10 @@ def run_experiment(exp_kwargs, exp_path):
         alg_candidate = rl_algorithm.BlrActionCentering(cost_params, update_cadence, smoothing_func_candidate, noise_var)
     elif exp_kwargs["alg_type"] == 'BLR_NO_AC':
         alg_candidate = rl_algorithm.BlrNoActionCentering(cost_params, update_cadence, smoothing_func_candidate, noise_var)
-    elif exp_kwargs["alg_type"] == 'BLR_AC_AE':
-        alg_candidate = rl_algorithm.BlrACWithAppEngagement(cost_params, update_cadence, smoothing_func_candidate, noise_var)
+    elif exp_kwargs["alg_type"] == 'BLR_AC_V2':
+        alg_candidate = rl_algorithm.BlrACV2(cost_params, update_cadence, smoothing_func_candidate)
+    elif exp_kwargs["alg_type"] == 'BLR_AC_V3':
+        alg_candidate = rl_algorithm.BlrACV3(cost_params, update_cadence, smoothing_func_candidate)
     else:
         print("ERROR: NO ALG_TYPE FOUND - ", exp_kwargs["alg_type"])
     print("ALG TYPE: {}".format(exp_kwargs["alg_type"]))

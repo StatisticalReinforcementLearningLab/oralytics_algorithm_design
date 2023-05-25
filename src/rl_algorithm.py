@@ -62,8 +62,9 @@ def process_alg_state_v1(env_state, b_bar, a_bar):
     return advantage_state, baseline_state
 
 """
-Algorithm State Space (For V2 and V3)
+Algorithm State Space (For V2)
 """
+# please refer to generate_env_state in sim_env_v2
 ## baseline: ##
 # 0 - time of day
 # 1 - b bar
@@ -78,7 +79,30 @@ Algorithm State Space (For V2 and V3)
 # 4 - bias
 def process_alg_state_v2(env_state, b_bar, a_bar):
     baseline_state = np.array([env_state[0], reward_definition.normalize_b_bar(b_bar), \
-                               reward_definition.normalize_a_bar(a_bar), env_state[4], 1])
+                               reward_definition.normalize_a_bar(a_bar), env_state[-1], 1])
+    advantage_state = np.copy(baseline_state)
+
+    return advantage_state, baseline_state
+
+"""
+Algorithm State Space (For V3)
+"""
+# please refer to generate_env_state in sim_env_v3
+## baseline: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - app engagement
+# 4 - bias
+## advantage: ##
+# 0 - time of day
+# 1 - b bar
+# 2 - a bar
+# 3 - app engagement
+# 4 - bias
+def process_alg_state_v3(env_state):
+    baseline_state = np.array([env_state[0], env_state[1], \
+                               env_state[2], env_state[3], 1])
     advantage_state = np.copy(baseline_state)
 
     return advantage_state, baseline_state
@@ -189,9 +213,36 @@ class BlrActionCentering(BayesianLinearRegression):
     def process_alg_state(self, env_state, b_bar, a_bar):
         return process_alg_state_v1(env_state, b_bar, a_bar)
 
-class BlrACWithAppEngagement(BlrActionCentering):
-    def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
-        super(BlrACWithAppEngagement, self).__init__(cost_params, update_cadence, smoothing_func)
+# algorithm candidates that run in the V2 environment
+# uses a prior built on Oralytics pilot data
+class BlrACV2(BlrActionCentering):
+    def __init__(self, cost_params, update_cadence, smoothing_func):
+        super(BlrACV2, self).__init__(cost_params, update_cadence, smoothing_func, None)
+
+        # THESE VALUES WERE SET WITH ORALYTICS PILOT DATA
+        # size of mu vector = D_baseline=5 + D_advantage=5 + D_advantage=5
+        self.D_ADVANTAGE = 5
+        self.D_BASELINE = 5
+        self.feature_dim = self.D_BASELINE + self.D_ADVANTAGE + self.D_ADVANTAGE
+        ALPHA_0_MU = [0, 0, 17, 0, 77]
+        BETA_MU = [0, 0, 0, 27, 0]
+        ALPHA_0_SIGMA = [23**2, 12**2, 15**2, 8**2, 44**2]
+        BETA_SIGMA = [12**2, 32**2, 29**2, 20**2, 13**2]
+        self.PRIOR_MU = np.array(ALPHA_0_MU + BETA_MU + BETA_MU)
+        self.PRIOR_SIGMA = np.diag(np.array(ALPHA_0_SIGMA + BETA_SIGMA + BETA_SIGMA))
+        self.posterior_mean = np.copy(self.PRIOR_MU)
+        self.posterior_var = np.copy(self.PRIOR_SIGMA)
+
+        self.SIGMA_N_2 = 4058
+
+    def process_alg_state(self, env_state, b_bar, a_bar):
+        return process_alg_state_v2(env_state, b_bar, a_bar)
+
+# algorithm candidates that run in the V3 environment
+# uses a prior built on ROBAS 2 data; this was the prior used in the Oralytics pilot data
+class BlrACV3(BlrActionCentering):
+    def __init__(self, cost_params, update_cadence, smoothing_func):
+        super(BlrACV3, self).__init__(cost_params, update_cadence, smoothing_func, None)
 
         # THESE VALUES WERE SET WITH ROBAS 2 DATA
         # size of mu vector = D_baseline=5 + D_advantage=5 + D_advantage=5
@@ -199,17 +250,18 @@ class BlrACWithAppEngagement(BlrActionCentering):
         self.D_BASELINE = 5
         self.feature_dim = self.D_BASELINE + self.D_ADVANTAGE + self.D_ADVANTAGE
         self.PRIOR_MU = np.array([0, 4.925, 0, 0, 82.209, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        sigma_beta = 29.624
+        SIGMA_BETA = 29.624
         self.PRIOR_SIGMA = np.diag(np.array([29.090**2, 30.186**2, SIGMA_BETA**2, SIGMA_BETA**2, 46.240**2, \
                                     SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2,\
                                     SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2, SIGMA_BETA**2]))
         self.posterior_mean = np.copy(self.PRIOR_MU)
         self.posterior_var = np.copy(self.PRIOR_SIGMA)
 
-        self.SIGMA_N_2 = noise_var
+        self.SIGMA_N_2 = 3396.449
 
+    # Note: In V3, the environment state already calculates a normalized version of b_bar and a_bar
     def process_alg_state(self, env_state, b_bar, a_bar):
-        return process_alg_state_v2(env_state, b_bar, a_bar)
+        return process_alg_state_v3(env_state)
 
 class BlrNoActionCentering(BayesianLinearRegression):
     def __init__(self, cost_params, update_cadence, smoothing_func, noise_var):
