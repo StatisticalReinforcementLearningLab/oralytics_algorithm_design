@@ -210,23 +210,12 @@ class SimulationEnvironmentV1(simulation_environment.SimulationEnvironment):
         delayed_effect_scale_val = simulation_environment.get_delayed_effect_scale(delayed_effect_scale)
         user_envs = create_user_envs(users_list, effect_size_scale, delayed_effect_scale_val, env_type)
 
-        super(SimulationEnvironmentV1, self).__init__(users_list, user_envs)
+        super(SimulationEnvironmentV1, self).__init__(users_list, user_envs, env_type)
 
-        self.env_type = env_type
-        # Dimension of the environment state space
-        self.dimension = 5 if env_type == 'STAT' else 6
+        self.version = "V1"
 
     def generate_current_state(self, user_idx, j):
         user_state = self.get_states_for_user(user_idx)[j]
         brushing_qualities = np.array(self.get_env_history(user_idx, "outcomes"))
 
-        return process_env_state(user_state, j, brushing_qualities, self.env_type)
-
-    def get_env_history(self, user_idx, property):
-        return self.all_user_envs[user_idx].get_user_history(property)
-
-    def set_env_history(self, user_idx, property, value):
-        self.all_user_envs[user_idx].set_user_history(property, value)
-
-    def update_responsiveness(self, user_idx, a1_cond, a2_cond, b_cond, j):
-        self.all_user_envs[user_idx].update_responsiveness(a1_cond, a2_cond, b_cond, j)
+        return process_env_state(user_state, j, brushing_qualities, self.get_env_type())

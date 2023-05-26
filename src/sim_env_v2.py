@@ -157,16 +157,13 @@ def get_user_effect_funcs(env_type):
 ---
 """
 
-class UserEnvironmentV2(simulation_environment.UserEnvironment):
+class UserEnvironmentV2(simulation_environment.UserEnvironmentAppEngagement):
     def __init__(self, user_id, model_type, user_effect_sizes, delayed_effect_scale_val, \
                 user_params, user_effect_func_bern, user_effect_func_y):
-        super(UserEnvironmentV2, self).__init__(user_id, model_type, None, user_effect_sizes, \
+        super(UserEnvironmentV2, self).__init__(user_id, model_type, user_effect_sizes, \
                   delayed_effect_scale_val, user_params, user_effect_func_bern, user_effect_func_y)
         # probability of opening app
         self.app_open_base_prob = 0.7
-
-    def generate_app_engagement(self):
-        return bernoulli.rvs(self.app_open_base_prob)
 
     # V2 users ignore the last index of the vector which is app engagement
     # because app engagement is not used to generate the reward
@@ -194,33 +191,19 @@ def create_user_envs(users_list, effect_size_scale, delayed_effect_scale_val, en
 
     return all_user_envs
 
-class SimulationEnvironmentV2(simulation_environment.SimulationEnvironment):
+class SimulationEnvironmentV2(simulation_environment.SimulationEnvironmentAppEngagement):
     def __init__(self, users_list, env_type, effect_size_scale, delayed_effect_scale):
         delayed_effect_scale_val = simulation_environment.get_delayed_effect_scale(delayed_effect_scale)
         user_envs = create_user_envs(users_list, effect_size_scale, delayed_effect_scale_val, env_type)
 
-        super(SimulationEnvironmentV2, self).__init__(users_list, user_envs)
+        super(SimulationEnvironmentV2, self).__init__(users_list, user_envs, env_type)
 
-        self.env_type = env_type
-        # Dimension of the environment state space
-        self.dimension = 5 if env_type == 'STAT' else 6
-
-    def generate_app_engagement(self, user_idx):
-        return self.all_user_envs[user_idx].generate_app_engagement()
+        self.version = "V2"
 
     def generate_current_state(self, user_idx, j):
-        # simulate whether or not the user opened their app yesterday
         # prior day app_engagement is 0 for the first day
-        app_engagement = 0 if j < 2 else self.generate_app_engagement(user_idx)
+        prior_app_engagement = self.get_user_prior_day_app_engagement(user_idx)
+        self.simulate_app_opening_behavior(user_idx, j)
         brushing_qualities = np.array(self.get_env_history(user_idx, "outcomes"))
 
-        return generate_env_state(j, brushing_qualities, app_engagement, self.env_type)
-
-    def get_env_history(self, user_idx, property):
-        return self.all_user_envs[user_idx].get_user_history(property)
-
-    def set_env_history(self, user_idx, property, value):
-        self.all_user_envs[user_idx].set_user_history(property, value)
-
-    def update_responsiveness(self, user_idx, a1_cond, a2_cond, b_cond, j):
-        self.all_user_envs[user_idx].update_responsiveness(a1_cond, a2_cond, b_cond, j)
+        return generate_env_state(j, brushing_qualities, prior_app_engagement, self.get_env_type())

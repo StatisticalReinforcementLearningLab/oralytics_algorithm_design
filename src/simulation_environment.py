@@ -7,11 +7,21 @@ from scipy.stats import norm
 import read_write_info
 
 class SimulationEnvironment():
-    def __init__(self, users_list, user_envs):
+    def __init__(self, users_list, user_envs, env_type):
+        # must be implemented by children
+        self.version = None
         # List: users in the environment (can repeat)
         self.users_list = users_list
         # Dict: key: int trial_user_idx, val: user environment object
         self.all_user_envs = user_envs
+        # STAT or NON_STAT
+        self.env_type = env_type
+
+    def get_version(self):
+        return self.version
+
+    def get_env_type(self):
+        return self.env_type
 
     # this method needs to be implemented by all children
     def generate_current_state(self):
@@ -33,6 +43,47 @@ class SimulationEnvironment():
 
     def get_users(self):
         return self.users_list
+
+    def get_env_history(self, user_idx, property):
+        return self.all_user_envs[user_idx].get_user_history(property)
+
+    def set_env_history(self, user_idx, property, value):
+        self.all_user_envs[user_idx].set_user_history(property, value)
+
+    def update_responsiveness(self, user_idx, a1_cond, a2_cond, b_cond, j):
+        self.all_user_envs[user_idx].update_responsiveness(a1_cond, a2_cond, b_cond, j)
+
+class SimulationEnvironmentAppEngagement(SimulationEnvironment):
+    def __init__(self, users_list, user_envs, env_type):
+        super(SimulationEnvironmentAppEngagement, self).__init__(users_list, user_envs, env_type)
+
+    def generate_app_engagement(self, user_idx):
+        return self.all_user_envs[user_idx].generate_app_engagement()
+
+    def get_user_prior_day_app_engagement(self, user_idx):
+        return self.all_user_envs[user_idx].get_prior_day_app_engagement()
+
+    def set_user_prior_day_app_engagement(self, user_idx, prior_app_engagement):
+        self.all_user_envs[user_idx].set_prior_day_app_engagement(prior_app_engagement)
+
+    def get_user_last_open_app_dt(self, user_idx):
+        return self.all_user_envs[user_idx].get_last_open_app_dt()
+
+    def set_user_last_open_app_dt(self, user_idx, j):
+        self.all_user_envs[user_idx].set_last_open_app_dt(j)
+
+    def simulate_app_opening_behavior(self, user_idx, j):
+        # we simulate that we only know if users opened their app in the morning
+        if j % 2 == 0:
+            # simulate whether or not the user opened their app
+            current_app_engagement = self.generate_app_engagement(user_idx)
+            if current_app_engagement:
+                self.set_user_last_open_app_dt(user_idx, j)
+        # we do not save that current day's app engagement until after the evening dt
+        else:
+            current_app_engagement = int(self.get_user_last_open_app_dt(user_idx) == j - 1)
+            self.set_user_prior_day_app_engagement(user_idx, current_app_engagement)
+
 
 # ### NORMALIZTIONS ###
 def normalize_total_brush_quality(quality):
@@ -150,6 +201,33 @@ class UserEnvironment():
 
     def get_user_effect_sizes(self):
         return self.user_effect_sizes
+
+class UserEnvironmentAppEngagement(UserEnvironment):
+    def __init__(self, user_id, model_type, user_effect_sizes, delayed_effect_scale_val, \
+                user_params, user_effect_func_bern, user_effect_func_y):
+        super(UserEnvironmentAppEngagement, self).__init__(user_id, model_type, None, user_effect_sizes, \
+                  delayed_effect_scale_val, user_params, user_effect_func_bern, user_effect_func_y)
+        # probability of opening app, needs to be implemented by children
+        self.app_open_base_prob = None
+        # tracking prior day app engagement
+        self.prior_day_app_engagement = 0
+        # last dt user open app, init: all users are assumed to open their app on the first day
+        self.last_open_app_dt = 0
+
+    def generate_app_engagement(self):
+        return bernoulli.rvs(self.app_open_base_prob)
+
+    def get_prior_day_app_engagement(self):
+        return self.prior_day_app_engagement
+
+    def set_prior_day_app_engagement(self, prior_day_app_engage):
+        self.prior_day_app_engagement = prior_day_app_engage
+
+    def get_last_open_app_dt(self):
+        return self.last_open_app_dt
+
+    def set_last_open_app_dt(self, j):
+        self.last_open_app_dt = j
 
 """## SIMULATING DELAYED EFFECTS COMPONENT
 ---

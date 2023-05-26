@@ -139,20 +139,59 @@ def compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
         estimating_eqn = alg_candidate.compute_estimating_equation([big_phi, big_r], n)
         set_estimating_eqns_df_values(estimating_eqns_df, update_t, user_idx, estimating_eqn)
 
+# if user did not open the app at all before the decision time, then we simulate
+# the algorithm selecting action based off of a stale state (i.e., b_bar is the b_bar from when the user last opened their app)
+# if user did open the app, then the algorithm selecting action based off of a fresh state (i.e., b_bar stays the same)
+def get_alg_state_from_app_opening(user_last_open_app_dt, data_df, user_idx, j, advantage_state):
+
+    # if morning dt we check if users opened the app in the morning
+    # if evening dt we check if users opened the app in the morning and in the evening
+    if j % 2 == 0:
+        user_opened_app_today = (user_last_open_app_dt == j)
+    else:
+        # we only simulate users opening the app for morning dts
+        user_opened_app_today = (user_last_open_app_dt == j - 1)
+    if not user_opened_app_today:
+        # impute b_bar with stale b_bar and prior day app engagement = 0
+        stale_b_bar = get_user_data_values_from_decision_t(data_df, user_idx, user_last_open_app_dt + 1, 'state.b.bar').flatten()[-1]
+        # refer to rl_algorithm.py process_alg_state functions for V2, V3
+        advantage_state[1] = stale_b_bar
+        advantage_state[3] = 0
+
+    return advantage_state
+
+def get_previous_day_qualities_and_actions(j, Qs, As):
+    if j > 1:
+        if j % 2 == 0:
+            return Qs, As
+        else:
+            # current evening dt does not use most recent quality or action
+            return Qs[:-1], As[:-1]
+    # first day return empty Qs and As back
+    else:
+        return Qs, As
+
 def execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, policy_idx):
     env_state = sim_env.generate_current_state(user_idx, j)
     user_qualities = get_user_data_values_from_decision_t(data_df, user_idx, j, 'quality').flatten()
     user_actions = get_user_data_values_from_decision_t(data_df, user_idx, j, 'action').flatten()
-    b_bar, a_bar = reward_definition.get_b_bar_a_bar(user_qualities, user_actions)
-    advantage_state, baseline_state = alg_candidate.process_alg_state(env_state, b_bar, a_bar)
+    Qs, As = get_previous_day_qualities_and_actions(j, user_qualities, user_actions)
+    b_bar, a_bar = reward_definition.get_b_bar_a_bar(Qs, As)
+    advantage_state, _ = alg_candidate.process_alg_state(env_state, b_bar, a_bar)
+    # simulate app opening issue
+    if sim_env.get_version() == "V2" or sim_env.get_version() == "V3":
+        user_last_open_app_dt = sim_env.get_user_last_open_app_dt(user_idx)
+        alg_state = get_alg_state_from_app_opening(user_last_open_app_dt, data_df, user_idx, j, advantage_state)
+    else:
+        alg_state = advantage_state
     ## ACTION SELECTION ##
-    action, action_prob = alg_candidate.action_selection(advantage_state)
+    action, action_prob = alg_candidate.action_selection(alg_state)
     ## REWARD GENERATION ##
     # quality definition
     quality = sim_env.generate_rewards(user_idx, env_state, action)
     reward = alg_candidate.reward_def_func(quality, action, b_bar, a_bar)
     ## SAVE VALUES ##
-    set_data_df_values_for_user(data_df, user_idx, j, policy_idx, action, action_prob, reward, quality, baseline_state)
+    set_data_df_values_for_user(data_df, user_idx, j, policy_idx, action, action_prob, reward, quality, alg_state)
     ## UPDATE UNRESPONSIVENESS ##
     # if it's after the first week
     if j >= 14:

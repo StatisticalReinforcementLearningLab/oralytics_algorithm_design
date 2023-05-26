@@ -29,6 +29,17 @@ for i, user_id in enumerate(SIM_ENV_USERS):
 ---
 """
 
+def get_previous_day_qualities_and_actions(j, Qs, As):
+    if j > 1:
+        if j % 2 == 0:
+            return Qs, As
+        else:
+            # current evening dt does not use most recent quality or action
+            return Qs[:-1], As[:-1]
+    # first day return empty Qs and As back
+    else:
+        return Qs, As
+
 # Stationary State Space
 # 0 - time of day
 # 1 - b_bar (normalized)
@@ -54,7 +65,8 @@ def generate_env_state(j, user_qualities, user_actions, app_engagement, env_type
     session_type = j % 2
     env_state[0] = session_type
     # b_bar, a_bar (normalized)
-    b_bar, a_bar = reward_definition.get_b_bar_a_bar(user_qualities, user_actions)
+    Qs, As = get_previous_day_qualities_and_actions(j, user_qualities, user_actions)
+    b_bar, a_bar = reward_definition.get_b_bar_a_bar(Qs, As)
     env_state[1] = reward_definition.normalize_b_bar(b_bar)
     env_state[2] = reward_definition.normalize_a_bar(a_bar)
     # app engagement
@@ -103,18 +115,15 @@ def get_user_effect_funcs():
 ---
 """
 
-class UserEnvironmentV3(simulation_environment.UserEnvironment):
+class UserEnvironmentV3(simulation_environment.UserEnvironmentAppEngagement):
     def __init__(self, user_id, model_type, user_params, adv_params, \
                 user_effect_func_bern, user_effect_func_y):
         # Note: in the base UserEnvironment, it uses simulated user_effect_sizes,
         # but we replace it with adv_params, user's fitted advantage parameters
-        super(UserEnvironmentV3, self).__init__(user_id, model_type, None, adv_params, \
-                  None, user_params, user_effect_func_bern, user_effect_func_y)
+        super(UserEnvironmentV3, self).__init__(user_id, model_type, adv_params, None, \
+                user_params, user_effect_func_bern, user_effect_func_y)
         # probability of opening app
         self.app_open_base_prob = get_app_open_prob(user_id)
-
-    def generate_app_engagement(self):
-        return bernoulli.rvs(self.app_open_base_prob)
 
     # we no longer simulate delayed effects because pilot data had outcomes under action 1
     def update_responsiveness(self, a1_cond, a2_cond, b_cond, j):
@@ -133,34 +142,20 @@ def create_user_envs(users_list, env_type):
 
     return all_user_envs
 
-class SimulationEnvironmentV3(simulation_environment.SimulationEnvironment):
+class SimulationEnvironmentV3(simulation_environment.SimulationEnvironmentAppEngagement):
     # note: v3 does not have effect_size_scale, delayed_effect_scale properties
     def __init__(self, users_list, env_type, effect_size_scale, delayed_effect_scale):
         user_envs = create_user_envs(users_list, env_type)
 
-        super(SimulationEnvironmentV3, self).__init__(users_list, user_envs)
+        super(SimulationEnvironmentV3, self).__init__(users_list, user_envs, env_type)
 
-        self.env_type = env_type
-        # Dimension of the environment state space
-        # self.dimension = 6 if env_type == 'STAT' else 7
-
-    def generate_app_engagement(self, user_idx):
-        return self.all_user_envs[user_idx].generate_app_engagement()
+        self.version = "V3"
 
     def generate_current_state(self, user_idx, j):
-        # simulate whether or not the user opened their app yesterday
         # prior day app_engagement is 0 for the first day
-        app_engagement = 0 if j < 2 else self.generate_app_engagement(user_idx)
+        prior_app_engagement = self.get_user_prior_day_app_engagement(user_idx)
+        self.simulate_app_opening_behavior(user_idx, j)
         brushing_qualities = np.array(self.get_env_history(user_idx, "outcomes"))
         past_actions = np.array(self.get_env_history(user_idx, "actions"))
 
-        return generate_env_state(j, brushing_qualities, past_actions, app_engagement, self.env_type)
-
-    def get_env_history(self, user_idx, property):
-        return self.all_user_envs[user_idx].get_user_history(property)
-
-    def set_env_history(self, user_idx, property, value):
-        self.all_user_envs[user_idx].set_user_history(property, value)
-
-    def update_responsiveness(self, user_idx, a1_cond, a2_cond, b_cond, j):
-        self.all_user_envs[user_idx].update_responsiveness(a1_cond, a2_cond, b_cond, j)
+        return generate_env_state(j, brushing_qualities, past_actions, prior_app_engagement, self.get_env_type())

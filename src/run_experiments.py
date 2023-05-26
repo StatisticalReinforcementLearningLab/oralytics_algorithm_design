@@ -31,11 +31,11 @@ import copy
 '''
 
 # FILL IN SIMULATION VERSION
-# SIM_ENV_VERSION = sim_env_v2
-SIM_ENV_VERSION = sim_env_v3
+SIM_ENV_VERSION = sim_env_v2
+# SIM_ENV_VERSION = sim_env_v3
 # SIM_ENV = sim_env_v1.SimulationEnvironmentV1
-# SIM_ENV = sim_env_v2.SimulationEnvironmentV2
-SIM_ENV = sim_env_v3.SimulationEnvironmentV3
+SIM_ENV = sim_env_v2.SimulationEnvironmentV2
+# SIM_ENV = sim_env_v3.SimulationEnvironmentV3
 
 MAX_SEED_VAL = 100
 NUM_TRIAL_USERS = 72
