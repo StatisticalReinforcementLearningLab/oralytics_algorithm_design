@@ -15,6 +15,7 @@ import reward_definition
 
 STAT_PARAMS_DF = pd.read_csv(read_write_info.READ_PATH_PREFIX + 'sim_env_data/v3_stat_zip_model_params.csv')
 NON_STAT_PARAMS_DF = pd.read_csv(read_write_info.READ_PATH_PREFIX + 'sim_env_data/v3_non_stat_zip_model_params.csv')
+APP_OPEN_PROB_DF = pd.read_csv(read_write_info.READ_PATH_PREFIX + 'sim_env_data/v3_app_open_prob.csv')
 SIM_ENV_USERS = np.array(STAT_PARAMS_DF['User'])
 # value used by run_experiments to draw with replacement
 NUM_USER_MODELS = len(SIM_ENV_USERS)
@@ -68,6 +69,9 @@ def generate_env_state(j, user_qualities, user_actions, app_engagement, env_type
 
     return env_state
 
+def get_app_open_prob(user_id):
+    return APP_OPEN_PROB_DF[APP_OPEN_PROB_DF['user_id'] == user_id]['app_open_prob'].values[0]
+
 # note: since v3 only chose zip models, these are the following parameters
 def get_base_params_for_user(user, env_type='STAT'):
   param_dim = 6 if env_type == 'STAT' else 7
@@ -107,7 +111,7 @@ class UserEnvironmentV3(simulation_environment.UserEnvironment):
         super(UserEnvironmentV3, self).__init__(user_id, model_type, None, adv_params, \
                   None, user_params, user_effect_func_bern, user_effect_func_y)
         # probability of opening app
-        self.app_open_base_prob = 0.7
+        self.app_open_base_prob = get_app_open_prob(user_id)
 
     def generate_app_engagement(self):
         return bernoulli.rvs(self.app_open_base_prob)
