@@ -27,14 +27,6 @@ class SimulationEnvironment():
     def generate_current_state(self):
         return None
 
-    # this method needs to be implemented by all children
-    def get_env_history(self):
-        return None
-
-    # this method needs to be implemented by all children
-    def set_env_history(self):
-        return None
-
     def generate_rewards(self, user_idx, state, action):
         return self.all_user_envs[user_idx].generate_reward(state, action)
 
@@ -46,9 +38,6 @@ class SimulationEnvironment():
 
     def get_env_history(self, user_idx, property):
         return self.all_user_envs[user_idx].get_user_history(property)
-
-    def set_env_history(self, user_idx, property, value):
-        self.all_user_envs[user_idx].set_user_history(property, value)
 
     def update_responsiveness(self, user_idx, a1_cond, a2_cond, b_cond, j):
         self.all_user_envs[user_idx].update_responsiveness(a1_cond, a2_cond, b_cond, j)
