@@ -53,12 +53,12 @@ for user_id in PILOT_USERS:
   users_non_stat_states[user_id] = non_stat_states
 
 ## Square Root Transform ##
-STAT_SQRT_NORM_DF = pd.read_csv("../sim_env_data/v3_stat_hurdle_model_params.csv")
-NON_STAT_SQRT_NORM_DF = pd.read_csv("../sim_env_data/v3_non_stat_hurdle_model_params.csv")
+STAT_SQRT_NORM_DF = pd.read_csv("../../sim_env_data/v3_stat_hurdle_model_params.csv")
+NON_STAT_SQRT_NORM_DF = pd.read_csv("../../sim_env_data/v3_non_stat_hurdle_model_params.csv")
 
 ## Zero Inflated Poisson ##
-STAT_ZERO_INFL_POIS_DF = pd.read_csv("../sim_env_data/v3_stat_zip_model_params.csv")
-NON_STAT_ZERO_INFL_POIS_DF = pd.read_csv("../sim_env_data/v3_non_stat_zip_model_params.csv")
+STAT_ZERO_INFL_POIS_DF = pd.read_csv("../../sim_env_data/v3_stat_zip_model_params.csv")
+NON_STAT_ZERO_INFL_POIS_DF = pd.read_csv("../../sim_env_data/v3_non_stat_zip_model_params.csv")
 
 """### Helpers
 ---

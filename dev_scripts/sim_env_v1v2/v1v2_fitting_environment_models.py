@@ -413,9 +413,9 @@ stat_log_norm_df = create_normal_transform_df_from_params(stat_normal_transform_
 
 stat_zip_df = create_zip_df_from_params(stat_zero_infl_model_columns, stat_zip_model_params)
 
-stat_sqrt_norm_df.to_csv('../sim_env_data/stat_sqrt_norm_hurdle_model_params.csv')
-stat_log_norm_df.to_csv('../sim_env_data/stat_log_norm_hurdle_model_params.csv')
-stat_zip_df.to_csv('../sim_env_data/stat_zip_model_params.csv')
+stat_sqrt_norm_df.to_csv('../../sim_env_data/stat_sqrt_norm_hurdle_model_params.csv')
+stat_log_norm_df.to_csv('../../sim_env_data/stat_log_norm_hurdle_model_params.csv')
+stat_zip_df.to_csv('../../sim_env_data/stat_zip_model_params.csv')
 
 non_stat_sqrt_norm_df = create_normal_transform_df_from_params(non_stat_normal_transform_model_columns, non_stat_bern_model_params, non_stat_sqrt_norm_model_params)
 
@@ -423,6 +423,6 @@ non_stat_log_norm_df = create_normal_transform_df_from_params(non_stat_normal_tr
 
 non_stat_zip_df = create_zip_df_from_params(non_stat_zero_infl_model_columns, non_stat_zip_model_params)
 
-non_stat_sqrt_norm_df.to_csv('../sim_env_data/non_stat_sqrt_norm_hurdle_model_params.csv')
-non_stat_log_norm_df.to_csv('../sim_env_data/non_stat_log_norm_hurdle_model_params.csv')
-non_stat_zip_df.to_csv('../sim_env_data/non_stat_zip_model_params.csv')
+non_stat_sqrt_norm_df.to_csv('../../sim_env_data/non_stat_sqrt_norm_hurdle_model_params.csv')
+non_stat_log_norm_df.to_csv('../../sim_env_data/non_stat_log_norm_hurdle_model_params.csv')
+non_stat_zip_df.to_csv('../../sim_env_data/non_stat_zip_model_params.csv')

@@ -4,8 +4,8 @@ from scipy.stats import bernoulli
 from scipy.stats import poisson
 from scipy.stats import norm
 
-ROBAS_3_STAT_PARAMS_DF = pd.read_csv('sim_env_data/stat_user_models.csv')
-ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('sim_env_data/non_stat_user_models.csv')
+ROBAS_3_STAT_PARAMS_DF = pd.read_csv('../../sim_env_data/stat_user_models.csv')
+ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('../../sim_env_data/non_stat_user_models.csv')
 ROBAS_3_DATA = pd.read_csv("https://raw.githubusercontent.com/ROBAS-UCLA/ROBAS.3/main/data/robas_3_data_complete.csv")
 ROBAS_3_USERS = ROBAS_3_USERS = np.unique(ROBAS_3_DATA['robas id'])
 

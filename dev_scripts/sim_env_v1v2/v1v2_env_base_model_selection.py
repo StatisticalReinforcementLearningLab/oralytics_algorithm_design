@@ -138,12 +138,12 @@ for user_id in ROBAS_3_USERS:
 """
 
 ## Square Root Transform ##
-STAT_SQRT_NORM_DF = pd.read_csv("../sim_env_data/stat_sqrt_norm_hurdle_model_params.csv")
-NON_STAT_SQRT_NORM_DF = pd.read_csv("../sim_env_data/non_stat_sqrt_norm_hurdle_model_params.csv")
+STAT_SQRT_NORM_DF = pd.read_csv("../../sim_env_data/stat_sqrt_norm_hurdle_model_params.csv")
+NON_STAT_SQRT_NORM_DF = pd.read_csv("../../sim_env_data/non_stat_sqrt_norm_hurdle_model_params.csv")
 
 ## Zero Inflated Poisson ##
-STAT_ZERO_INFL_POIS_DF = pd.read_csv("../sim_env_data/stat_zip_model_params.csv")
-NON_STAT_ZERO_INFL_POIS_DF = pd.read_csv("../sim_env_data/non_stat_zip_model_params.csv")
+STAT_ZERO_INFL_POIS_DF = pd.read_csv("../../sim_env_data/stat_zip_model_params.csv")
+NON_STAT_ZERO_INFL_POIS_DF = pd.read_csv("../../sim_env_data/non_stat_zip_model_params.csv")
 
 def get_norm_transform_params_for_user(user, df, env_type='stat'):
   param_dim = 5 if env_type == 'stat' else 6
@@ -276,5 +276,5 @@ non_stat_env_model_columns = ['User', 'Model Type', 'Time.of.Day.Bern', 'Prior.D
 stat_env_models_df = create_df_from_params(STAT_USER_MODELS, stat_env_model_columns, STAT_SQRT_NORM_DF, STAT_ZERO_INFL_POIS_DF, 'stat')
 non_stat_env_models_df = create_df_from_params(NON_STAT_USER_MODELS, non_stat_env_model_columns, NON_STAT_SQRT_NORM_DF, NON_STAT_ZERO_INFL_POIS_DF, 'non_stat')
 
-stat_env_models_df.to_csv("../sim_env_data/stat_user_models.csv")
-non_stat_env_models_df.to_csv("../sim_env_data/non_stat_user_models.csv")
+stat_env_models_df.to_csv("../../sim_env_data/stat_user_models.csv")
+non_stat_env_models_df.to_csv("../../sim_env_data/non_stat_user_models.csv")

@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as np
 import pickle
 
-ROBAS_3_STAT_PARAMS_DF = pd.read_csv('sim_env_data/stat_user_models.csv')
-ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('sim_env_data/non_stat_user_models.csv')
+ROBAS_3_STAT_PARAMS_DF = pd.read_csv('../../sim_env_data/stat_user_models.csv')
+ROBAS_3_NON_STAT_PARAMS_DF = pd.read_csv('../../sim_env_data/non_stat_user_models.csv')
 
 """## Constructing the Effect Sizes
 ---
@@ -114,11 +114,11 @@ print("SMALLER NON STAT USER EFFECT SIZES: ", SMALLER_NON_STAT_USER_EFFECT_SIZES
 print("LESS SMALL STAT USER EFFECT SIZES: ", LESS_SMALL_STAT_USER_EFFECT_SIZES)
 print("LESS SMALL NON STAT USER EFFECT SIZES: ", LESS_SMALL_NON_STAT_USER_EFFECT_SIZES)
 
-with open("sim_env_data/smaller_stat_user_effect_sizes.p", 'wb') as f:
+with open("../../sim_env_data/smaller_stat_user_effect_sizes.p", 'wb') as f:
     pickle.dump(SMALLER_STAT_USER_EFFECT_SIZES, f)
-with open("sim_env_data/smaller_non_stat_user_effect_sizes.p", 'wb') as f:
+with open("../../sim_env_data/smaller_non_stat_user_effect_sizes.p", 'wb') as f:
     pickle.dump(SMALLER_NON_STAT_USER_EFFECT_SIZES, f)
-with open("sim_env_data/less_small_stat_user_effect_sizes.p", 'wb') as f:
+with open("../../sim_env_data/less_small_stat_user_effect_sizes.p", 'wb') as f:
     pickle.dump(LESS_SMALL_STAT_USER_EFFECT_SIZES, f)
-with open("sim_env_data/less_small_non_stat_user_effect_sizes.p", 'wb') as f:
+with open("../../sim_env_data/less_small_non_stat_user_effect_sizes.p", 'wb') as f:
     pickle.dump(LESS_SMALL_NON_STAT_USER_EFFECT_SIZES, f)
