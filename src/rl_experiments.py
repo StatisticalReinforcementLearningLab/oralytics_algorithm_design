@@ -260,6 +260,11 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             set_update_df_values(update_df, update_idx, alg_candidate.posterior_mean, alg_candidate.posterior_var)
         # handle adding or removing user groups
         week += 1
+        print("NUM. PEOPLE CURRENTLY IN STUDY", len(current_groups))
+        # check if we want to end period of pure exploration
+        if alg_candidate.is_pure_exploration_period() and len(current_groups) >= 15:
+            print("PERIOD OF PURE EXPLORATION ENDED.")
+            alg_candidate.end_pure_exploration_period()
         # biweekly recruitment rate
         if week % 2 != 0:
             print("Week", week)

@@ -172,12 +172,25 @@ class BayesianLinearRegression(RLAlgorithm):
         self.feature_map = None
         self.posterior_mean = None
         self.posterior_var = None
+        # parameter used to control study-level period of pure exploration
+        self.use_prior = True
 
     def action_selection(self, advantage_state):
-        return bayes_lr_action_selector(self.posterior_mean[-self.D_ADVANTAGE:], \
+        if self.use_prior:
+            return bayes_lr_action_selector(self.PRIOR_MU[-self.D_ADVANTAGE:], \
+                                                self.PRIOR_SIGMA[-self.D_ADVANTAGE:,-self.D_ADVANTAGE:], \
+                                                advantage_state, \
+                                                self.smoothing_func)
+        else:
+            return bayes_lr_action_selector(self.posterior_mean[-self.D_ADVANTAGE:], \
                                                 self.posterior_var[-self.D_ADVANTAGE:,-self.D_ADVANTAGE:], \
                                                 advantage_state, \
                                                 self.smoothing_func)
+    def is_pure_exploration_period(self):
+        return self.use_prior
+
+    def end_pure_exploration_period(self):
+        self.use_prior = False
 
     def update(self, alg_states, actions, pis, rewards):
         Phi = self.feature_map(alg_states, alg_states, actions, pis)
