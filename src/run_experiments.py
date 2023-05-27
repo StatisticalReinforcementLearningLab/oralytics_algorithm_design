@@ -4,6 +4,8 @@ import sim_env_v1
 import sim_env_v2
 import sim_env_v3
 import smoothing_function
+import experiment_global_vars
+
 import pickle
 import numpy as np
 import pandas as pd
@@ -31,14 +33,15 @@ import copy
 '''
 
 # FILL IN SIMULATION VERSION
-SIM_ENV_VERSION = sim_env_v2
-# SIM_ENV_VERSION = sim_env_v3
+# SIM_ENV_VERSION = sim_env_v2
+SIM_ENV_VERSION = sim_env_v3
 # SIM_ENV = sim_env_v1.SimulationEnvironmentV1
-SIM_ENV = sim_env_v2.SimulationEnvironmentV2
-# SIM_ENV = sim_env_v3.SimulationEnvironmentV3
+# SIM_ENV = sim_env_v2.SimulationEnvironmentV2
+SIM_ENV = sim_env_v3.SimulationEnvironmentV3
 
-MAX_SEED_VAL = 100
-NUM_TRIAL_USERS = 72
+MAX_SEED_VAL = experiment_global_vars.MAX_SEED_VAL
+NUM_TRIALS = experiment_global_vars.NUM_TRIALS
+NUM_TRIAL_USERS = experiment_global_vars.NUM_TRIAL_USERS
 
 def get_user_list(study_idxs):
     user_list = [SIM_ENV_VERSION.USER_INDICES[idx] for idx in study_idxs]
@@ -61,6 +64,14 @@ def get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_
 
     return users_list, environment_module
 
+def get_cluster_size(pooling_type):
+    if pooling_type == "full_pooling":
+        return NUM_TRIAL_USERS
+    elif pooling_type == "no_pooling":
+        return 1
+    else:
+        print("ERROR: NO CLUSTER_SIZE FOUND - ", pooling_type)
+
 # ANNA TODO: need to do similar procedure for reward def. tuning
 # check if we are hyperparameter tuning or evaluating algorithm candidates
 # if tuning_hypers:
@@ -71,7 +82,7 @@ def get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_
 
 def run_experiment(exp_kwargs, exp_path):
     ## HANDLING RL ALGORITHM CANDIDATE ##
-    cluster_size = exp_kwargs["cluster_size"]
+    cluster_size = get_cluster_size(exp_kwargs["cluster_size"])
     L_min, L_max = exp_kwargs["clipping_vals"]
     b_logistic = exp_kwargs["b_logistic"]
     print("CLIPPING VALUES: [{}, {}]".format(L_min, L_max))
@@ -116,7 +127,7 @@ def run_experiment(exp_kwargs, exp_path):
         for current_seed in range(MAX_SEED_VAL):
             users_list, environment_module = get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
             user_groups = rl_experiments.pre_process_users(users_list)
-            data_df, update_df, _ = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
+            data_df, update_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
             data_df_pickle_location = data_pickle_template.format(current_seed)
             update_df_pickle_location = update_pickle_template.format(current_seed)
 

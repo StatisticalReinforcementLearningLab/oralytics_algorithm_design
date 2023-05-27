@@ -35,7 +35,7 @@ NOISE_VARS = [None]
 CLIPPING_VALS = [[0.2, 0.8]]
 B_LOGISTICS = [0.515]
 UPDATE_CADENCES = [2]
-CLUSTER_SIZES = [72]
+CLUSTER_SIZES = ["full_pooling"] #no_pooling
 COST_PARAMS = [[100, 100]]
 
 QUEUE = [

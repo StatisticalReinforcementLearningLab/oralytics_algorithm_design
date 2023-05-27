@@ -2,16 +2,12 @@ import rl_algorithm
 import numpy as np
 import pandas as pd
 import reward_definition
+import experiment_global_vars
 
-## GLOBAL VALUES ##
-### CHANGE BACK TO  `RECRUITMENT_RATE = 72` TO NOT DO INCREMENTAL RECRUITMENT ###
-# RECRUITMENT_RATE = 72
-RECRUITMENT_RATE = 4
-TRIAL_LENGTH_IN_WEEKS = 10
-# We should have NUM_USERS x NUM_DECISION_TIMES datapoints for each saved value or
-# statistic at the end of the study
-NUM_DECISION_TIMES = 70 * 2
-# BATCH_DATA_SIZE = 72 * NUM_DECISION_TIMES
+RECRUITMENT_RATE = experiment_global_vars.RECRUITMENT_RATE
+TRIAL_LENGTH_IN_WEEKS = experiment_global_vars.TRIAL_LENGTH_IN_WEEKS
+NUM_DECISION_TIMES = experiment_global_vars.NUM_DECISION_TIMES
+FILL_IN_COLS = experiment_global_vars.FILL_IN_COLS
 
 # assumes a weekly recruitment rate
 def compute_num_updates(users_groups, update_cadence):
@@ -21,14 +17,6 @@ def compute_num_updates(users_groups, update_cadence):
     num_updates = num_study_decision_times / update_cadence
 
     return int(num_updates)
-
-## ANNA TODO: need to think of a more generalizable way to input this
-# for now: if running sim env V1, change it back ##
-# FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality', 'state.tod', 'state.b.bar',\
-#  'state.a.bar', 'state.bias']
-
-FILL_IN_COLS = ['policy_idx', 'action', 'prob', 'reward', 'quality'] + ['state.tod', 'state.b.bar',\
- 'state.a.bar', 'state.app.engage', 'state.bias']
 
 def create_dfs_no_pooling(users, update_cadence, rl_algorithm_feature_dim):
     N = len(users)
@@ -242,7 +230,7 @@ def pre_process_users(total_trial_users):
 def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
     env_users = sim_env.get_users()
     update_cadence = alg_candidate.get_update_cadence()
-    data_df, update_df, estimating_eqns_df = create_dfs_full_pooling(user_groups, update_cadence, alg_candidate.get_feature_dim())
+    data_df, update_df, _ = create_dfs_full_pooling(user_groups, update_cadence, alg_candidate.get_feature_dim())
     # add in prior values to posterior dataframe
     set_update_df_values(update_df, 0, alg_candidate.posterior_mean, alg_candidate.posterior_var)
     current_groups = user_groups[:RECRUITMENT_RATE]
@@ -270,17 +258,16 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             update_idx = 1 + (week - 1) * num_updates_within_week + update_idx_within_week
             print("UPDATE TIME.", update_idx)
             set_update_df_values(update_df, update_idx, alg_candidate.posterior_mean, alg_candidate.posterior_var)
-            # estimating questions
-            compute_and_estimating_equation_statistic(data_df, estimating_eqns_df, \
-                                                            current_user_idxs, alg_candidate, \
-                                                            update_idx, day_in_study)
         # handle adding or removing user groups
         week += 1
-        if (week - 1 < len(user_groups) // RECRUITMENT_RATE):
-            # add more users
-            current_groups = np.concatenate((current_groups, user_groups[RECRUITMENT_RATE * (week - 1): RECRUITMENT_RATE * (week - 1) + RECRUITMENT_RATE]), axis=0)
-        # check if some user group finished the study
-        if (week > TRIAL_LENGTH_IN_WEEKS):
-            current_groups = current_groups[RECRUITMENT_RATE:]
+        # biweekly recruitment rate
+        if week % 2 != 0:
+            print("Week", week)
+            if (week - 1 < len(user_groups) // RECRUITMENT_RATE):
+                # add more users
+                current_groups = np.concatenate((current_groups, user_groups[RECRUITMENT_RATE * (week - 1): RECRUITMENT_RATE * (week - 1) + RECRUITMENT_RATE]), axis=0)
+            # check if some user group finished the study
+            if (week > TRIAL_LENGTH_IN_WEEKS):
+                current_groups = current_groups[RECRUITMENT_RATE:]
 
-    return data_df, update_df, estimating_eqns_df
+    return data_df, update_df
