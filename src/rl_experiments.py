@@ -197,7 +197,7 @@ def run_experiment(alg_candidates, sim_env):
         set_update_df_values_for_user(update_df, user_idx, 0, \
         alg_candidates[user_idx].posterior_mean, alg_candidates[user_idx].posterior_var)
     for j in range(NUM_DECISION_TIMES):
-        print("Decision Time: ", j)
+        # print("Decision Time: ", j)
         for user_idx in range(len(env_users)):
             alg_candidate = alg_candidates[user_idx]
             execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, policy_idxs[user_idx])
@@ -210,8 +210,12 @@ def run_experiment(alg_candidates, sim_env):
                 alg_candidate.update(alg_states, actions, pis, rewards)
                 policy_idxs[user_idx] += 1
                 update_idx = int(policy_idxs[user_idx])
-                print("Update Time {} for {}".format(update_idx, user_idx))
+                # print("Update Time {} for {}".format(update_idx, user_idx))
                 set_update_df_values_for_user(update_df, user_idx, update_idx, alg_candidate.posterior_mean, alg_candidate.posterior_var)
+            # check if we want to end period of pure exploration for each user
+            # for each user's first week, we use the prior
+            if alg_candidate.is_pure_exploration_period() and j >= 13:
+                alg_candidate.end_pure_exploration_period()
 
     return data_df, update_df
 
@@ -256,17 +260,15 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             rewards = get_data_df_values_for_users(data_df, current_user_idxs, day_in_study, 'reward').flatten()
             alg_candidate.update(alg_states, actions, pis, rewards)
             update_idx = 1 + (week - 1) * num_updates_within_week + update_idx_within_week
-            print("UPDATE TIME.", update_idx)
+            # print("UPDATE TIME.", update_idx)
             set_update_df_values(update_df, update_idx, alg_candidate.posterior_mean, alg_candidate.posterior_var)
         # handle adding or removing user groups
         week += 1
         # check if we want to end period of pure exploration
         if alg_candidate.is_pure_exploration_period() and len(current_groups) >= 15:
-            print("PERIOD OF PURE EXPLORATION ENDED.")
             alg_candidate.end_pure_exploration_period()
         # biweekly recruitment rate
         if week % 2 != 0:
-            print("Week", week)
             if (week - 1 < len(user_groups) // RECRUITMENT_RATE):
                 # add more users
                 current_groups = np.concatenate((current_groups, user_groups[RECRUITMENT_RATE * (week - 1): RECRUITMENT_RATE * (week - 1) + RECRUITMENT_RATE]), axis=0)
