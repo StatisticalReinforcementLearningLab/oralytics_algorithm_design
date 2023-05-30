@@ -24,7 +24,7 @@ OUTPUT_DIR = read_write_info.WRITE_PATH_PREFIX
 # be grid-searched over.
 # Note that the second parameter must be a dictionary in which each
 # value is a list of options.
-BASE_ENV_TYPE = ["STAT", "NON_STAT"]
+BASE_ENV_TYPE = ["NON_STAT", "STAT"]
 EFFECT_SIZE_SCALES = ["small", "smaller"]
 DELAYED_EFFECT_SCALES = ["LOW_R", "MED_R", "HIGH_R"]
 ALG_TYPES = ["BLR_AC_V2"] # "BLR_AC_V3"
@@ -33,13 +33,13 @@ ALG_TYPES = ["BLR_AC_V2"] # "BLR_AC_V3"
 # NOISE_VARS = [3396.449, 3412.422]
 NOISE_VARS = [None]
 CLIPPING_VALS = [[0.2, 0.8]]
-B_LOGISTICS = [0.515]
-UPDATE_CADENCES = [2]
-CLUSTER_SIZES = ["full_pooling"] #no_pooling
+B_LOGISTICS = [0.515, 5.15]
+UPDATE_CADENCES = [2, 14]
+CLUSTER_SIZES = ["no_pooling", "full_pooling"]
 COST_PARAMS = [[100, 100]]
 
 QUEUE = [
-    ('noise_var', dict(base_env_type=BASE_ENV_TYPE,
+    ('test_v2', dict(base_env_type=BASE_ENV_TYPE,
                        effect_size_scale=EFFECT_SIZE_SCALES,
                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
                        alg_type=ALG_TYPES,
