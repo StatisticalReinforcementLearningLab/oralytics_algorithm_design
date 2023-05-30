@@ -106,8 +106,10 @@ def get_adv_params_for_user(user, env_type='STAT'):
   return bern_adv, poisson_adv
 
 def get_user_effect_funcs():
-    bern_adv_func = lambda state, adv_params: adv_params @ state
-    y_adv_func = lambda state, adv_params: adv_params @ state
+    # negative treatment effect means users are more likely to brush
+    bern_adv_func = lambda state, adv_params: min(adv_params @ state, 0)
+    # positive treatment effect means users brush more seconds
+    y_adv_func = lambda state, adv_params: max(adv_params @ state, 0)
 
     return bern_adv_func, y_adv_func
 
@@ -116,36 +118,33 @@ def get_user_effect_funcs():
 """
 
 class UserEnvironmentV3(simulation_environment.UserEnvironmentAppEngagement):
-    def __init__(self, user_id, model_type, user_params, adv_params, \
-                user_effect_func_bern, user_effect_func_y):
+    def __init__(self, user_id, model_type, adv_params, delayed_effect_scale_val, \
+                user_params, user_effect_func_bern, user_effect_func_y):
         # Note: in the base UserEnvironment, it uses simulated user_effect_sizes,
         # but we replace it with adv_params, user's fitted advantage parameters
-        super(UserEnvironmentV3, self).__init__(user_id, model_type, adv_params, None, \
-                user_params, user_effect_func_bern, user_effect_func_y)
+        super(UserEnvironmentV3, self).__init__(user_id, model_type, adv_params, \
+            delayed_effect_scale_val, user_params, user_effect_func_bern, user_effect_func_y)
         # probability of opening app
         self.app_open_base_prob = get_app_open_prob(user_id)
 
-    # we no longer simulate delayed effects because pilot data had outcomes under action 1
-    def update_responsiveness(self, a1_cond, a2_cond, b_cond, j):
-        return None
-
-def create_user_envs(users_list, env_type):
+def create_user_envs(users_list, delayed_effect_scale_val, env_type):
     all_user_envs = {}
     for i, user_id in enumerate(users_list):
       model_type = "zip" # note: all users in V3 have the zero-inflated poisson model
       base_params = get_base_params_for_user(user_id, env_type)
       adv_params = get_adv_params_for_user(user_id, env_type)
       user_effect_func_bern, user_effect_func_y = get_user_effect_funcs()
-      new_user = UserEnvironmentV3(user_id, model_type, base_params, adv_params, \
-                    user_effect_func_bern, user_effect_func_y)
+      new_user = UserEnvironmentV3(user_id, model_type, adv_params, \
+                delayed_effect_scale_val, base_params, user_effect_func_bern, user_effect_func_y)
       all_user_envs[i] = new_user
 
     return all_user_envs
 
 class SimulationEnvironmentV3(simulation_environment.SimulationEnvironmentAppEngagement):
-    # note: v3 does not have effect_size_scale, delayed_effect_scale properties
+    # note: v3 does not have effect_size_scale property
     def __init__(self, users_list, env_type, effect_size_scale, delayed_effect_scale):
-        user_envs = create_user_envs(users_list, env_type)
+        delayed_effect_scale_val = simulation_environment.get_delayed_effect_scale(delayed_effect_scale)
+        user_envs = create_user_envs(users_list, delayed_effect_scale_val, env_type)
 
         super(SimulationEnvironmentV3, self).__init__(users_list, user_envs, env_type)
 
