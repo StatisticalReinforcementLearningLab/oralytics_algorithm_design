@@ -32,33 +32,37 @@ import copy
 * 'algorithm_val_2': the RL algorithm candidate value for var 2
 '''
 
-# FILL IN SIMULATION VERSION
-SIM_ENV_VERSION = sim_env_v2
-# SIM_ENV_VERSION = sim_env_v3
-# SIM_ENV = sim_env_v1.SimulationEnvironmentV1
-SIM_ENV = sim_env_v2.SimulationEnvironmentV2
-# SIM_ENV = sim_env_v3.SimulationEnvironmentV3
-
 MAX_SEED_VAL = experiment_global_vars.MAX_SEED_VAL
 NUM_TRIALS = experiment_global_vars.NUM_TRIALS
 NUM_TRIAL_USERS = experiment_global_vars.NUM_TRIAL_USERS
 
-def get_user_list(study_idxs):
-    user_list = [SIM_ENV_VERSION.USER_INDICES[idx] for idx in study_idxs]
+def get_user_list(version, study_idxs):
+    user_list = [version.USER_INDICES[idx] for idx in study_idxs]
 
     return user_list
 
-def get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_seed):
+def get_sim_env(sim_env_version, base_env_type, effect_size_scale, delayed_effect_scale, current_seed):
+    if sim_env_version == "v3":
+        version = sim_env_v3
+        sim_env = sim_env_v3.SimulationEnvironmentV3
+    elif sim_env_version == "v2":
+        version = sim_env_v2
+        sim_env = sim_env_v2.SimulationEnvironmentV2
+    elif sim_env_version == "v1":
+        version = sim_env_v1
+        sim_env = sim_env_v1.SimulationEnvironmentV1
+    else:
+        print("ERROR: NO SIM ENV VERSION FOUND - ", sim_env_version)
     # draw different users per trial
     print("SEED: ", current_seed)
     np.random.seed(current_seed)
-    study_idxs = np.random.choice(SIM_ENV_VERSION.NUM_USER_MODELS, size=NUM_TRIAL_USERS)
+    study_idxs = np.random.choice(version.NUM_USER_MODELS, size=NUM_TRIAL_USERS)
 
     # get user ids corresponding to index
-    users_list = get_user_list(study_idxs)
+    users_list = get_user_list(version, study_idxs)
     print(users_list)
     ## HANDLING SIMULATION ENVIRONMENT ##
-    environment_module = SIM_ENV(users_list, base_env_type, effect_size_scale, delayed_effect_scale)
+    environment_module = sim_env(users_list, base_env_type, effect_size_scale, delayed_effect_scale)
 
     print("PROCESSED ENV_TYPE: {}, EFFECT SIZE SCALE: {}".format(base_env_type, effect_size_scale))
 
@@ -106,6 +110,7 @@ def run_experiment(exp_kwargs, exp_path):
     data_pickle_template = exp_path + '/{}_data_df.p'
     update_pickle_template = exp_path + '/{}_update_df.p'
 
+    sim_env_version = exp_kwargs["sim_env_version"]
     base_env_type = exp_kwargs["base_env_type"]
     effect_size_scale = exp_kwargs["effect_size_scale"]
     delayed_effect_scale = exp_kwargs["delayed_effect_scale"]
@@ -114,7 +119,7 @@ def run_experiment(exp_kwargs, exp_path):
         alg_candidates = [copy.deepcopy(alg_candidate) for _ in range(NUM_TRIAL_USERS)]
         for current_seed in range(MAX_SEED_VAL):
 
-            _, environment_module = get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
+            _, environment_module = get_sim_env(sim_env_version, base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
             data_df, update_df = rl_experiments.run_experiment(alg_candidates, environment_module)
             data_df_pickle_location = data_pickle_template.format(current_seed)
             update_df_pickle_location = update_pickle_template.format(current_seed)
@@ -125,7 +130,7 @@ def run_experiment(exp_kwargs, exp_path):
 
     elif cluster_size == NUM_TRIAL_USERS:
         for current_seed in range(MAX_SEED_VAL):
-            users_list, environment_module = get_sim_env(base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
+            users_list, environment_module = get_sim_env(sim_env_version, base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
             user_groups = rl_experiments.pre_process_users(users_list)
             data_df, update_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
             data_df_pickle_location = data_pickle_template.format(current_seed)

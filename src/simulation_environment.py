@@ -134,9 +134,6 @@ class UserEnvironment():
         self.user_effect_sizes = np.copy(self.og_user_effect_sizes)
         # float: unresponsive scaling value
         self.delayed_effect_scale_val = delayed_effect_scale_val
-        # probability of becoming unresponsive
-        ### SETTING TO 1 FOR NOW!
-        self.unresponsive_prob = 1.0
         # you can only shrink at most once a week
         self.times_shrunk = 0
         # reward generating function
@@ -171,11 +168,8 @@ class UserEnvironment():
         # it's been atleast a week since we last shrunk
         if j % 14 == 0:
             if (b_cond and a1_cond) or a2_cond:
-                # draw
-                is_unresponsive = bernoulli.rvs(self.unresponsive_prob)
-                if is_unresponsive:
-                    self.user_effect_sizes = self.user_effect_sizes * self.delayed_effect_scale_val
-                    self.times_shrunk += 1
+                self.user_effect_sizes = self.user_effect_sizes * self.delayed_effect_scale_val
+                self.times_shrunk += 1
 
             elif self.times_shrunk > 0:
                 if self.delayed_effect_scale_val == 0:

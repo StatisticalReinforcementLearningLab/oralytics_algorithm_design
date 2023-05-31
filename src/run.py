@@ -27,22 +27,23 @@ OUTPUT_DIR = read_write_info.WRITE_PATH_PREFIX
 BASE_ENV_TYPE = ["NON_STAT", "STAT"]
 EFFECT_SIZE_SCALES = ["small", "smaller"]
 DELAYED_EFFECT_SCALES = ["LOW_R", "MED_R", "HIGH_R"]
-ALG_TYPES = ["BLR_AC_V2"] # "BLR_AC_V3"
 # Note: 3396.449 is the noise variance from ROBAS 2 data
 # 3412.422 is the noise variance from ROBAS 3 data
 # NOISE_VARS = [3396.449, 3412.422]
-NOISE_VARS = [None]
+NOISE_VARS = ["None"]
 CLIPPING_VALS = [[0.2, 0.8]]
+COST_PARAMS = [[100, 100]]
+### ALGORITHM VARIANTS ###
 B_LOGISTICS = [0.515, 5.15]
 UPDATE_CADENCES = [2, 14]
-CLUSTER_SIZES = ["no_pooling", "full_pooling"]
-COST_PARAMS = [[100, 100]]
+CLUSTER_SIZES = ["full_pooling", "no_pooling"]
 
 QUEUE = [
-    ('test_v2', dict(base_env_type=BASE_ENV_TYPE,
-                       effect_size_scale=EFFECT_SIZE_SCALES,
+    ('test_v3', dict(sim_env_version=["v3"],
+                       base_env_type=BASE_ENV_TYPE,
+                       effect_size_scale=["None"],
                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
-                       alg_type=ALG_TYPES,
+                       alg_type=["BLR_AC_V3"],
                        noise_var=NOISE_VARS,
                        clipping_vals=CLIPPING_VALS,
                        b_logistic=B_LOGISTICS,
@@ -50,9 +51,24 @@ QUEUE = [
                        cluster_size=CLUSTER_SIZES,
                        cost_params=COST_PARAMS
                        )
-    )
+    ),
+    ('test_v2', dict(sim_env_version=["v2"],
+                       base_env_type=BASE_ENV_TYPE,
+                       effect_size_scale=EFFECT_SIZE_SCALES,
+                       delayed_effect_scale=DELAYED_EFFECT_SCALES,
+                       alg_type=["BLR_AC_V2"],
+                       noise_var=NOISE_VARS,
+                       clipping_vals=CLIPPING_VALS,
+                       b_logistic=B_LOGISTICS,
+                       update_cadence=UPDATE_CADENCES,
+                       cluster_size=CLUSTER_SIZES,
+                       cost_params=COST_PARAMS
+                       )
+    ),
 ]
 
+# what keys in the dictionary do we save the files to
+OUTPUT_PATH_NAMES = ["base_env_type", "delayed_effect_scale", "effect_size_scale", "b_logistic", "update_cadence", "cluster_size"]
 
 def run(exp_dir, exp_name, exp_kwargs):
     '''
@@ -61,9 +77,8 @@ def run(exp_dir, exp_name, exp_kwargs):
     1. Create directory 'exp_dir' as a function of 'exp_kwarg'.
        This is so that each set of experiment+hyperparameters get their own directory.
     '''
-
-    # ANNA TODO: need to make this more generalizable
-    exp_path = os.path.join(exp_dir, "{}_{}_{}_{}".format(exp_kwargs["base_env_type"], exp_kwargs["effect_size_scale"], exp_kwargs["delayed_effect_scale"], exp_kwargs["noise_var"]))
+    exp_path = os.path.join(exp_dir, "_".join([str(exp_kwargs[key]) for key in OUTPUT_PATH_NAMES]))
+    print('Results will be stored stored in:', exp_path)
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
     '''
@@ -75,7 +90,7 @@ def run(exp_dir, exp_name, exp_kwargs):
     '''
     3. You can find results in 'exp_dir'
     '''
-    print('Results are stored in:', exp_dir)
+    print('Results are stored in:', exp_path)
     print('with experiment parameters', exp_kwargs)
     print('\n')
 
