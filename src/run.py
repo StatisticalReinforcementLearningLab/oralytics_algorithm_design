@@ -10,6 +10,7 @@ import run_experiments
 # on your machine, or to run a sequence of jobs one after another
 # in an interactive shell on odyssey.
 DRYRUN = True
+JOB_TYPE = "simulations" #hyper_tuning #simulations #compute_metrics
 
 # This is the base directory where the results will be stored.
 # On Odyssey, you may not want this to be your home directory
@@ -36,7 +37,7 @@ COST_PARAMS = [[100, 100]]
 ### ALGORITHM VARIANTS ###
 B_LOGISTICS = [0.515, 5.15]
 UPDATE_CADENCES = [2, 14]
-CLUSTER_SIZES = ["full_pooling", "no_pooling"]
+CLUSTER_SIZES = ["full_pooling"] # "no_pooling"
 
 QUEUE = [
     ('test_v3', dict(sim_env_version=["v3"],
@@ -68,7 +69,9 @@ QUEUE = [
 ]
 
 # what keys in the dictionary do we save the files to
-OUTPUT_PATH_NAMES = ["base_env_type", "delayed_effect_scale", "effect_size_scale", "b_logistic", "update_cadence", "cluster_size"]
+SIM_ENV_NAMES = ["base_env_type", "delayed_effect_scale", "effect_size_scale"]
+ALG_CAND_NAMES = ["b_logistic", "update_cadence", "cluster_size"]
+OUTPUT_PATH_NAMES = SIM_ENV_NAMES + ALG_CAND_NAMES
 
 def run(exp_dir, exp_name, exp_kwargs):
     '''
@@ -86,7 +89,7 @@ def run(exp_dir, exp_name, exp_kwargs):
     Note: Results are saved after every seed in run_experiments
     '''
     print('Running experiment {}:'.format(exp_name))
-    run_experiments.run_experiment(exp_kwargs, exp_path)
+    run_experiments.run_experiment(exp_kwargs, exp_path, JOB_TYPE)
     '''
     3. You can find results in 'exp_dir'
     '''

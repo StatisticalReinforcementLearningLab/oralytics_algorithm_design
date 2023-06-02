@@ -5,6 +5,7 @@ import sim_env_v2
 import sim_env_v3
 import smoothing_function
 import experiment_global_vars
+import compute_metrics
 
 import pickle
 import numpy as np
@@ -33,7 +34,6 @@ import copy
 '''
 
 MAX_SEED_VAL = experiment_global_vars.MAX_SEED_VAL
-NUM_TRIALS = experiment_global_vars.NUM_TRIALS
 NUM_TRIAL_USERS = experiment_global_vars.NUM_TRIAL_USERS
 
 def get_user_list(version, study_idxs):
@@ -68,6 +68,20 @@ def get_sim_env(sim_env_version, base_env_type, effect_size_scale, delayed_effec
 
     return users_list, environment_module
 
+def get_alg_candidate(alg_type, cluster_size, smoothing_func, update_cadence, cost_params, noise_var):
+    if alg_type == 'BLR_AC':
+        alg_candidate = rl_algorithm.BlrActionCentering(cost_params, update_cadence, smoothing_func, noise_var)
+    elif alg_type == 'BLR_NO_AC':
+        alg_candidate = rl_algorithm.BlrNoActionCentering(cost_params, update_cadence, smoothing_func, noise_var)
+    elif alg_type == 'BLR_AC_V2':
+        alg_candidate = rl_algorithm.BlrACV2(cost_params, update_cadence, smoothing_func)
+    elif alg_type == 'BLR_AC_V3':
+        alg_candidate = rl_algorithm.BlrACV3(cost_params, update_cadence, smoothing_func)
+    else:
+        print("ERROR: NO ALG_TYPE FOUND - ", alg_type)
+    print("ALG TYPE: {}".format(alg_type))
+    return alg_candidate
+
 def get_cluster_size(pooling_type):
     if pooling_type == "full_pooling":
         return NUM_TRIAL_USERS
@@ -83,29 +97,31 @@ def get_cluster_size(pooling_type):
     # pickle_names = (exp_kwargs["sim_env_type"], exp_kwargs["effect_size_scale"], cost_params[0], cost_params[1])
     # data_pickle_template = exp_path + 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
     # update_pickle_template = exp_path + 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
+#"compute_metrics" #hyper_tuning
+def run_experiment(exp_kwargs, exp_path, job_type):
+    if job_type == "simulations":
+        run_simulations(exp_kwargs, exp_path)
+    elif job_type == "compute_metrics":
+        run_compute_metrics(exp_kwargs, exp_path)
+    elif job_type == "hyper_tuning":
+        # ANNA TODO: see if you need a completely separate function, this may need to change
+        run_simulations(exp_kwargs, exp_path)
+    else:
+        print("ERROR: NO JOB_TYPE FOUND - ", job_type)
 
-def run_experiment(exp_kwargs, exp_path):
+def run_simulations(exp_kwargs, exp_path):
     ## HANDLING RL ALGORITHM CANDIDATE ##
     cluster_size = get_cluster_size(exp_kwargs["cluster_size"])
     L_min, L_max = exp_kwargs["clipping_vals"]
     b_logistic = exp_kwargs["b_logistic"]
     print("CLIPPING VALUES: [{}, {}]".format(L_min, L_max))
-    smoothing_func_candidate = smoothing_function.genearlized_logistic_func_wrapper(L_min, L_max, b_logistic)
+    smoothing_func = smoothing_function.genearlized_logistic_func_wrapper(L_min, L_max, b_logistic)
     update_cadence = exp_kwargs["update_cadence"]
     cost_params = exp_kwargs["cost_params"]
     print("PROCESSED CANDIDATE VALS {}".format(cost_params))
     noise_var = exp_kwargs["noise_var"]
-    if exp_kwargs["alg_type"] == 'BLR_AC':
-        alg_candidate = rl_algorithm.BlrActionCentering(cost_params, update_cadence, smoothing_func_candidate, noise_var)
-    elif exp_kwargs["alg_type"] == 'BLR_NO_AC':
-        alg_candidate = rl_algorithm.BlrNoActionCentering(cost_params, update_cadence, smoothing_func_candidate, noise_var)
-    elif exp_kwargs["alg_type"] == 'BLR_AC_V2':
-        alg_candidate = rl_algorithm.BlrACV2(cost_params, update_cadence, smoothing_func_candidate)
-    elif exp_kwargs["alg_type"] == 'BLR_AC_V3':
-        alg_candidate = rl_algorithm.BlrACV3(cost_params, update_cadence, smoothing_func_candidate)
-    else:
-        print("ERROR: NO ALG_TYPE FOUND - ", exp_kwargs["alg_type"])
-    print("ALG TYPE: {}".format(exp_kwargs["alg_type"]))
+    alg_type = exp_kwargs["alg_type"]
+    alg_candidate = get_alg_candidate(alg_type, cluster_size, smoothing_func, update_cadence, cost_params, noise_var)
 
     data_pickle_template = exp_path + '/{}_data_df.p'
     update_pickle_template = exp_path + '/{}_update_df.p'
@@ -139,3 +155,14 @@ def run_experiment(exp_kwargs, exp_path):
             print("TRIAL DONE, PICKLING NOW")
             pd.to_pickle(data_df, data_df_pickle_location)
             pd.to_pickle(update_df, update_df_pickle_location)
+
+def run_compute_metrics(exp_kwargs, exp_path):
+    env_alg_mean, env_alg_lower_25 = compute_metrics.get_metric_values(exp_path, MAX_SEED_VAL)
+
+    avg_pickle_location = exp_path + '/avg.p'
+    lower_25_pickle_location = exp_path + '/low_25.p'
+
+    with open(avg_pickle_location, 'wb') as handle:
+        pickle.dump(env_alg_mean, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(lower_25_pickle_location, 'wb') as handle:
+        pickle.dump(env_alg_lower_25, handle, protocol=pickle.HIGHEST_PROTOCOL)

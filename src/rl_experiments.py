@@ -220,11 +220,11 @@ def run_experiment(alg_candidates, sim_env):
     return data_df, update_df
 
 # returns a int(NUM_USERS / RECRUITMENT_RATE) x RECRUITMENT_RATE array of user indices
-# row index represents the week that they enter the study
+# row index represents every other week that they enter the study
 def pre_process_users(total_trial_users):
     results = []
     for j, user in enumerate(total_trial_users):
-        results.append((int(j), int(j // RECRUITMENT_RATE), user))
+        results.append((int(j), int(2 * (j // RECRUITMENT_RATE)) + 1, user))
 
     return np.array(results)
 
@@ -248,7 +248,7 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             for user_tuple in current_groups:
                 user_idx, user_entry_date = int(user_tuple[0]), int(user_tuple[1])
                 for decision_idx in range(update_cadence):
-                    j = (week - 1 - user_entry_date) * 14 + (update_idx_within_week * update_cadence) + decision_idx
+                    j = (week - user_entry_date) * 14 + (update_idx_within_week * update_cadence) + decision_idx
                     execute_decision_time(data_df, user_idx, j, alg_candidate, sim_env, update_idx)
             ### UPDATE TIME ###
             day_in_study = 1 + (week - 1) * 7 + (update_idx_within_week + decision_idx // 2)
@@ -269,10 +269,12 @@ def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
             alg_candidate.end_pure_exploration_period()
         # biweekly recruitment rate
         if week % 2 != 0:
-            if (week - 1 < len(user_groups) // RECRUITMENT_RATE):
-                # add more users
-                current_groups = np.concatenate((current_groups, user_groups[RECRUITMENT_RATE * (week - 1): RECRUITMENT_RATE * (week - 1) + RECRUITMENT_RATE]), axis=0)
+            # add more users
+            # if there are no more users in user_groups to add then current_groups will stay the same
+            current_groups = np.concatenate((current_groups, user_groups[np.where(user_groups[:, 1] == str(week))]), axis=0)
             # check if some user group finished the study
+            # since we only add users biweekly, users finishing the study should also be
+            # at a biweekly cadence
             if (week > TRIAL_LENGTH_IN_WEEKS):
                 current_groups = current_groups[RECRUITMENT_RATE:]
 
