@@ -10,7 +10,7 @@ import run_experiments
 # on your machine, or to run a sequence of jobs one after another
 # in an interactive shell on odyssey.
 DRYRUN = True
-JOB_TYPE = "simulations" #hyper_tuning #simulations #compute_metrics
+JOB_TYPE = "hyper_tuning" #hyper_tuning #simulations #compute_metrics
 
 # This is the base directory where the results will be stored.
 # On Odyssey, you may not want this to be your home directory
@@ -33,45 +33,69 @@ DELAYED_EFFECT_SCALES = ["LOW_R", "MED_R", "HIGH_R"]
 # NOISE_VARS = [3396.449, 3412.422]
 NOISE_VARS = ["None"]
 CLIPPING_VALS = [[0.2, 0.8]]
-COST_PARAMS = [[100, 100]]
+# COST_PARAMS = [[100, 100]]
 ### ALGORITHM VARIANTS ###
 B_LOGISTICS = [0.515, 5.15]
 UPDATE_CADENCES = [2, 14]
 CLUSTER_SIZES = ["full_pooling"] # "no_pooling"
 
+COST_PARAMS = [[i,j] for i in range(0, 200, 20) for j in range(0, 200, 20)]
+
+### RUNNING SIMULATIONS ###
+# QUEUE = [
+#     ('test_v3', dict(sim_env_version=["v3"],
+#                        base_env_type=BASE_ENV_TYPE,
+#                        effect_size_scale=["None"],
+#                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
+#                        alg_type=["BLR_AC_V3"],
+#                        noise_var=NOISE_VARS,
+#                        clipping_vals=CLIPPING_VALS,
+#                        b_logistic=B_LOGISTICS,
+#                        update_cadence=UPDATE_CADENCES,
+#                        cluster_size=CLUSTER_SIZES,
+#                        cost_params=COST_PARAMS
+#                        )
+#     ),
+#     ('test_v2', dict(sim_env_version=["v2"],
+#                        base_env_type=BASE_ENV_TYPE,
+#                        effect_size_scale=EFFECT_SIZE_SCALES,
+#                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
+#                        alg_type=["BLR_AC_V2"],
+#                        noise_var=NOISE_VARS,
+#                        clipping_vals=CLIPPING_VALS,
+#                        b_logistic=B_LOGISTICS,
+#                        update_cadence=UPDATE_CADENCES,
+#                        cluster_size=CLUSTER_SIZES,
+#                        cost_params=COST_PARAMS
+#                        )
+#     )
+# ]
+
+### HYPERPARAMETER TUNING ###
 QUEUE = [
-    ('test_v3', dict(sim_env_version=["v3"],
+    ('hyper_v3', dict(sim_env_version=["v3"],
                        base_env_type=BASE_ENV_TYPE,
                        effect_size_scale=["None"],
                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
                        alg_type=["BLR_AC_V3"],
-                       noise_var=NOISE_VARS,
-                       clipping_vals=CLIPPING_VALS,
-                       b_logistic=B_LOGISTICS,
-                       update_cadence=UPDATE_CADENCES,
-                       cluster_size=CLUSTER_SIZES,
                        cost_params=COST_PARAMS
                        )
     ),
-    ('test_v2', dict(sim_env_version=["v2"],
+    ('hyper_v2', dict(sim_env_version=["v2"],
                        base_env_type=BASE_ENV_TYPE,
                        effect_size_scale=EFFECT_SIZE_SCALES,
                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
                        alg_type=["BLR_AC_V2"],
-                       noise_var=NOISE_VARS,
-                       clipping_vals=CLIPPING_VALS,
-                       b_logistic=B_LOGISTICS,
-                       update_cadence=UPDATE_CADENCES,
-                       cluster_size=CLUSTER_SIZES,
                        cost_params=COST_PARAMS
                        )
-    ),
+    )
 ]
 
 # what keys in the dictionary do we save the files to
 SIM_ENV_NAMES = ["base_env_type", "delayed_effect_scale", "effect_size_scale"]
 ALG_CAND_NAMES = ["b_logistic", "update_cadence", "cluster_size"]
 OUTPUT_PATH_NAMES = SIM_ENV_NAMES + ALG_CAND_NAMES
+HYPER_OUTPUT_PATH_NAMES = SIM_ENV_NAMES + ['cost_params']
 
 def run(exp_dir, exp_name, exp_kwargs):
     '''
@@ -80,7 +104,10 @@ def run(exp_dir, exp_name, exp_kwargs):
     1. Create directory 'exp_dir' as a function of 'exp_kwarg'.
        This is so that each set of experiment+hyperparameters get their own directory.
     '''
-    exp_path = os.path.join(exp_dir, "_".join([str(exp_kwargs[key]) for key in OUTPUT_PATH_NAMES]))
+    if JOB_TYPE == 'simulations' or JOB_TYPE == 'compute_metrics':
+        exp_path = os.path.join(exp_dir, "_".join([str(exp_kwargs[key]) for key in OUTPUT_PATH_NAMES]))
+    else:
+        exp_path = os.path.join(exp_dir, "_".join([str(exp_kwargs[key]) for key in HYPER_OUTPUT_PATH_NAMES]))
     print('Results will be stored stored in:', exp_path)
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)

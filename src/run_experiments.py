@@ -104,10 +104,39 @@ def run_experiment(exp_kwargs, exp_path, job_type):
     elif job_type == "compute_metrics":
         run_compute_metrics(exp_kwargs, exp_path)
     elif job_type == "hyper_tuning":
-        # ANNA TODO: see if you need a completely separate function, this may need to change
-        run_simulations(exp_kwargs, exp_path)
+        run_hyperparameter_tuning(exp_kwargs, exp_path)
     else:
         print("ERROR: NO JOB_TYPE FOUND - ", job_type)
+
+def run_hyperparameter_tuning(exp_kwargs, exp_path):
+    cluster_size = get_cluster_size("full_pooling")
+    L_min, L_max = [0.2, 0.8]
+    b_logistic = 0.515
+    smoothing_func = smoothing_function.genearlized_logistic_func_wrapper(L_min, L_max, b_logistic)
+    update_cadence = 14
+    cost_params = exp_kwargs["cost_params"]
+    print("PROCESSED CANDIDATE VALS {}".format(cost_params))
+    alg_type = exp_kwargs["alg_type"]
+    alg_candidate = get_alg_candidate(alg_type, cluster_size, smoothing_func, update_cadence, cost_params, None)
+
+    data_pickle_template = exp_path + '/{}_data_df.p'
+    update_pickle_template = exp_path + '/{}_update_df.p'
+
+    sim_env_version = exp_kwargs["sim_env_version"]
+    base_env_type = exp_kwargs["base_env_type"]
+    effect_size_scale = exp_kwargs["effect_size_scale"]
+    delayed_effect_scale = exp_kwargs["delayed_effect_scale"]
+
+    for current_seed in range(MAX_SEED_VAL):
+        users_list, environment_module = get_sim_env(sim_env_version, base_env_type, effect_size_scale, delayed_effect_scale, current_seed)
+        user_groups = rl_experiments.pre_process_users(users_list)
+        data_df, update_df = rl_experiments.run_incremental_recruitment_exp(user_groups, alg_candidate, environment_module)
+        data_df_pickle_location = data_pickle_template.format(current_seed)
+        update_df_pickle_location = update_pickle_template.format(current_seed)
+
+        print("TRIAL DONE, PICKLING NOW")
+        pd.to_pickle(data_df, data_df_pickle_location)
+        pd.to_pickle(update_df, update_df_pickle_location)
 
 def run_simulations(exp_kwargs, exp_path):
     ## HANDLING RL ALGORITHM CANDIDATE ##

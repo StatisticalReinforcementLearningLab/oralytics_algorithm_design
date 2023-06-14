@@ -232,7 +232,6 @@ def pre_process_users(total_trial_users):
 # users_groups will be a list of tuples where tuple[0] is the user index
 # tuple[1] is the week they entered the study, tuple[2] is the user id string
 def run_incremental_recruitment_exp(user_groups, alg_candidate, sim_env):
-    env_users = sim_env.get_users()
     update_cadence = alg_candidate.get_update_cadence()
     data_df, update_df, _ = create_dfs_full_pooling(user_groups, update_cadence, alg_candidate.get_feature_dim())
     # add in prior values to posterior dataframe
