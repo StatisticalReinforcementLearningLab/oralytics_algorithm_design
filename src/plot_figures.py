@@ -14,7 +14,7 @@ import read_write_info
 ENV_VARIANTS = dict(
     BASE_NAMES = ["STAT_LOW_R", "STAT_MED_R", "STAT_HIGH_R",\
      "NON_STAT_LOW_R", "NON_STAT_MED_R", "NON_STAT_HIGH_R"],
-    EFFECT_SIZE_SCALE=['small', 'smaller']
+    EFFECT_SIZE_SCALE=['small', 'smaller', 'None']
 )
 
 ENV_NAMES = ["{}_{}".format(*sim_env_params) for sim_env_params in itertools.product(*list(ENV_VARIANTS.values()))]

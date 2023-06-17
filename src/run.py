@@ -10,7 +10,7 @@ import run_experiments
 # on your machine, or to run a sequence of jobs one after another
 # in an interactive shell on odyssey.
 DRYRUN = True
-JOB_TYPE = "hyper_tuning" #hyper_tuning #simulations #compute_metrics
+JOB_TYPE = "hyper_plots" #hyper_tuning #simulations #compute_metrics #hyper_plots
 
 # This is the base directory where the results will be stored.
 # On Odyssey, you may not want this to be your home directory
@@ -72,21 +72,37 @@ COST_PARAMS = [[i,j] for i in range(0, 200, 20) for j in range(0, 200, 20)]
 # ]
 
 ### HYPERPARAMETER TUNING ###
+# QUEUE = [
+#     ('hyper_v3', dict(sim_env_version=["v3"],
+#                        base_env_type=BASE_ENV_TYPE,
+#                        effect_size_scale=["None"],
+#                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
+#                        alg_type=["BLR_AC_V3"],
+#                        cost_params=COST_PARAMS
+#                        )
+#     ),
+#     ('hyper_v2', dict(sim_env_version=["v2"],
+#                        base_env_type=BASE_ENV_TYPE,
+#                        effect_size_scale=EFFECT_SIZE_SCALES,
+#                        delayed_effect_scale=DELAYED_EFFECT_SCALES,
+#                        alg_type=["BLR_AC_V2"],
+#                        cost_params=COST_PARAMS
+#                        )
+#     )
+# ]
+
+### HYPERPARAMETER PLOTTING ###
 QUEUE = [
-    ('hyper_v3', dict(sim_env_version=["v3"],
-                       base_env_type=BASE_ENV_TYPE,
-                       effect_size_scale=["None"],
-                       delayed_effect_scale=DELAYED_EFFECT_SCALES,
-                       alg_type=["BLR_AC_V3"],
-                       cost_params=COST_PARAMS
-                       )
-    ),
     ('hyper_v2', dict(sim_env_version=["v2"],
                        base_env_type=BASE_ENV_TYPE,
                        effect_size_scale=EFFECT_SIZE_SCALES,
-                       delayed_effect_scale=DELAYED_EFFECT_SCALES,
-                       alg_type=["BLR_AC_V2"],
-                       cost_params=COST_PARAMS
+                       delayed_effect_scale=DELAYED_EFFECT_SCALES
+                       )
+    ),
+    ('hyper_v3', dict(sim_env_version=["v3"],
+                       base_env_type=BASE_ENV_TYPE,
+                       effect_size_scale=["None"],
+                       delayed_effect_scale=DELAYED_EFFECT_SCALES
                        )
     )
 ]
@@ -106,8 +122,10 @@ def run(exp_dir, exp_name, exp_kwargs):
     '''
     if JOB_TYPE == 'simulations' or JOB_TYPE == 'compute_metrics':
         exp_path = os.path.join(exp_dir, "_".join([str(exp_kwargs[key]) for key in OUTPUT_PATH_NAMES]))
-    else:
+    elif JOB_TYPE == 'hyper_tuning':
         exp_path = os.path.join(exp_dir, "_".join([str(exp_kwargs[key]) for key in HYPER_OUTPUT_PATH_NAMES]))
+    else:
+        exp_path = os.path.join(exp_dir, "_".join([str(exp_kwargs[key]) for key in SIM_ENV_NAMES]))
     print('Results will be stored stored in:', exp_path)
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)

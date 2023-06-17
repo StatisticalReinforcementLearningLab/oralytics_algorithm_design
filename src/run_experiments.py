@@ -6,6 +6,7 @@ import sim_env_v3
 import smoothing_function
 import experiment_global_vars
 import compute_metrics
+import hyperparams_computation
 
 import pickle
 import numpy as np
@@ -105,8 +106,14 @@ def run_experiment(exp_kwargs, exp_path, job_type):
         run_compute_metrics(exp_kwargs, exp_path)
     elif job_type == "hyper_tuning":
         run_hyperparameter_tuning(exp_kwargs, exp_path)
+    elif job_type == "hyper_plots":
+        make_hyperparamter_plots(exp_kwargs, exp_path)
     else:
         print("ERROR: NO JOB_TYPE FOUND - ", job_type)
+
+def make_hyperparamter_plots(exp_kwargs, exp_path):
+    data_pickle = exp_path + '/{}_data_df.p'
+    hyperparams_computation.create_and_save_plots(exp_path)
 
 def run_hyperparameter_tuning(exp_kwargs, exp_path):
     cluster_size = get_cluster_size("full_pooling")
