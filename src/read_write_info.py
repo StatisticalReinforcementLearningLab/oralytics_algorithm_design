@@ -1,7 +1,3 @@
-#### For cluster dev ####
-# READ_PATH_PREFIX = "/n/holyscratch01/doshi-velez_lab/Users/atrella/"
-# WRITE_PATH_PREFIX = "/n/holyscratch01/doshi-velez_lab/Users/atrella/"
-
-#### For local dev ####
+### TODO: fill in with your specific read and write path
 READ_PATH_PREFIX = ""
 WRITE_PATH_PREFIX = ""
