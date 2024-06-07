@@ -91,14 +91,6 @@ def get_cluster_size(pooling_type):
     else:
         print("ERROR: NO CLUSTER_SIZE FOUND - ", pooling_type)
 
-# ANNA TODO: need to do similar procedure for reward def. tuning
-# check if we are hyperparameter tuning or evaluating algorithm candidates
-# if tuning_hypers:
-    # print("We are doing hyperparameter tuning!")
-    # pickle_names = (exp_kwargs["sim_env_type"], exp_kwargs["effect_size_scale"], cost_params[0], cost_params[1])
-    # data_pickle_template = exp_path + 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_data_df.p'
-    # update_pickle_template = exp_path + 'hyper_pickle_results/{}_{}_{}_{}_'.format(*pickle_names) + '{}_update_df.p'
-#"compute_metrics" #hyper_tuning
 def run_experiment(exp_kwargs, exp_path, job_type):
     if job_type == "simulations":
         run_simulations(exp_kwargs, exp_path)
