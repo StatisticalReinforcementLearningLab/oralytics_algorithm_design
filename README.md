@@ -25,15 +25,21 @@ We describe the procedure for creating the V2 simulation environment test bed:
 
 ### Running Experiments
 To run experiments:
-1. Fill in the read and write path in `read_write_info.py`. This specifies what path to read data from and what path to write results to. 
-2. In `run.py`, specify experiments parameters as instructed in the file. Example: specify the simulation environment variants and algorithm candidate properties.
+1. Fill in the read and write path in [read_write_info.py](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/src/read_write_info.py). This specifies what path to read data from and what path to write results to. 
+2. In [run.py](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/src/run.py), specify experiments parameters as instructed in the file. Example: specify the simulation environment variants and algorithm candidate properties. You must modify the `JOB_TYPE` field to specify what job to run. In addition, you must modify the `DRYRUN` field to specify running jobs in parallel or sequentially. `DRYRUN = True` runs jobs one after the other (this is a good practice to test out new code initially). Switch to `DRYRUN = False` to run experiments in parallel.  
+
+There are 4 types of jobs:
+  * `simulations`: runs the main set of experiments for each algorithm candidate in each simulation environment variant
+  * `compute_metrics`: computes desired metrics using outputs from `simulations`
+  * `hyper_tuning`: runs the hyperparameter tuning for the reward parameters after finalizing the algorithm candidate 
+  * `hyper_plots`: computes hyperparameter grid plots using outputs from `hyper_tuning`
+    
+For each job type, there are commented out example lists called `QUEUE`. Please comment / uncomment to fit your job type but make sure only one `QUEUE` is uncommented at a time.
+
 3. Run `python3 src/submit_batch` on the cluster to submit jobs and run in parallel.
 
 ### Running Unit Tests
 To run tests, you need to be in the root folder and then run for example `python3 -m unittest test.test_rl_experiments` if you want to run the `test_rl_experiments.py` file in the test folder.
-
-### Hyperparameter Tuning
-TBD
 
 ### Fitting the Prior
 TBD
