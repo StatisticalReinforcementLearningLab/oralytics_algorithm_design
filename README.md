@@ -38,8 +38,10 @@ For each job type, there are commented out example lists called `QUEUE`. Please 
 
 3. Run `python3 src/submit_batch` on the cluster to submit jobs and run in parallel.
 
+### Fitting the Prior
+For the Oralytics main study, we designed the prior based off of Oralytics pilot data and in discussion with domain experts. [pilot_prior_formation.py](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/dev_scripts/prior%20formation/pilot_prior_formation.py) is the code for calculating the statistics and plots which informed the design of the prior. For knowledge sharing, we have kept additional scripts in the folder [prior formation](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/tree/main/dev_scripts/prior%20formation) which contains code using GEE analysis as a measure for significance testing.
+
 ### Running Unit Tests
 To run tests, you need to be in the root folder and then run for example `python3 -m unittest test.test_rl_experiments` if you want to run the `test_rl_experiments.py` file in the test folder.
 
-### Fitting the Prior
-TBD
+
