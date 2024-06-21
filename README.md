@@ -1,7 +1,32 @@
 # Oralytics Algorithm Design Decisions
 
-This repository contains code for running simulations to make design decisions for the Oralytics RL algorithm. Full details can be found in Appendix A of the [Oralytics protocol paper](https://www.sciencedirect.com/science/article/abs/pii/S1551714424000387).
+This repository contains code for running simulations to make design decisions for the Oralytics RL algorithm. Full details can be found in [Oralytics Algorithm Report](https://arxiv.org/abs/2406.13127) or Appendix A of the [Oralytics protocol paper](https://www.sciencedirect.com/science/article/abs/pii/S1551714424000387).
 
+## Citing Our Code
+If you use our data or code in any way, please cite us:
+```
+@article{nahum2024optimizing,
+  title={Optimizing an adaptive digital oral health intervention for promoting oral self-care behaviors: Micro-randomized trial protocol},
+  author={Nahum-Shani, Inbal and Greer, Zara M and Trella, Anna L and Zhang, Kelly W and Carpenter, Stephanie M and Ruenger, Dennis and Elashoff, David and Murphy, Susan A and Shetty, Vivek},
+  journal={Contemporary Clinical Trials},
+  volume={139},
+  pages={107464},
+  year={2024},
+  publisher={Elsevier}
+}
+```
+
+```
+@misc{trella2024oralytics,
+      title={Oralytics Reinforcement Learning Algorithm}, 
+      author={Anna L. Trella and Kelly W. Zhang and Stephanie M. Carpenter and David Elashoff and Zara M. Greer and Inbal Nahum-Shani and Dennis Ruenger and Vivek Shetty and Susan A. Murphy},
+      year={2024},
+      eprint={2406.13127},
+      archivePrefix={arXiv},
+      primaryClass={id='cs.AI' full_name='Artificial Intelligence' is_active=True alt_name=None in_archive='cs' is_general=False description='Covers all areas of AI except Vision, Robotics, Machine Learning, Multiagent Systems, and Computation and Language (Natural Language Processing), which have separate subject areas. In particular, includes Expert Systems, Theorem Proving (although this may overlap with Logic in Computer Science), Knowledge Representation, Planning, and Uncertainty in AI. Roughly includes material in ACM Subject Classes I.2.0, I.2.1, I.2.3, I.2.4, I.2.8, and I.2.11.'}
+}
+```
+## Running Our Code
 ### Simulation Environment
 To make the final design decisions on the Oralytics algorithm for the main study of Oralytics, we used the Oralytics V2 simulation environment test bed to run simulations. V2 was built off of ROBAS 3 data and included simulated app opening behavior. Although not used in the final design phase, we include code for V1, a previous (now deprecated) version and V3, a version built off of Oralytics pilot data that was not needed for our simulations, but could still be useful for other research teams.
 
@@ -24,6 +49,8 @@ We describe the procedure for creating the V2 simulation environment test bed:
 5. Running `python3 dev_scripts/sim_env_v3/app_opening_prob_calculation.py` will take in Oralytics pilot data and calculate app opening probabilites for each participant in the pilot study. This value was used to determine the population-level app opening probability we imputed in the V2 test bed.
 
 ### Running Experiments
+Experiments can be run sequentially one at a time or in parallel.
+
 To run experiments:
 1. Fill in the read and write path in [read_write_info.py](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/src/read_write_info.py). This specifies what path to read data from and what path to write results to. 
 2. In [run.py](https://github.com/StatisticalReinforcementLearningLab/oralytics_algorithm_design/blob/main/src/run.py), specify experiments parameters as instructed in the file. Example: specify the simulation environment variants and algorithm candidate properties. You must modify the `JOB_TYPE` field to specify what job to run. In addition, you must modify the `DRYRUN` field to specify running jobs in parallel or sequentially. `DRYRUN = True` runs jobs one after the other (this is a good practice to test out new code initially). Switch to `DRYRUN = False` to run experiments in parallel.  
