@@ -22,7 +22,7 @@ from pymc.model import Model
 
 import pickle
 
-PILOT_DATA = pd.read_csv('sim_env_v3_data.csv')
+PILOT_DATA = pd.read_csv('https://raw.githubusercontent.com/StatisticalReinforcementLearningLab/oralytics_pilot_data/main/pilot_data_with_feature_engineering.csv')
 PILOT_USERS = np.unique(PILOT_DATA['user_id'])
 
 def get_user_data(df, user_id):
